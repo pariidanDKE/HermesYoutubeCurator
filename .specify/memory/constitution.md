@@ -1,50 +1,113 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+Version change: unversioned template -> 1.0.0
+Modified principles:
+- Template Principle 1 -> I. Prefer One Simple Path
+- Template Principle 2 -> II. Stay Close to the Proven Stack
+- Template Principle 3 -> III. Separate Concerns with Deep Modules
+- Template Principle 4 -> IV. Test the Seams
+- Template Principle 5 -> V. Verify Against Current Sources
+Added sections:
+- Engineering Boundaries
+- Delivery Workflow
+Removed sections:
+- None
+Templates requiring updates:
+- ✅ .specify/templates/plan-template.md
+- ✅ .specify/templates/spec-template.md
+- ✅ .specify/templates/tasks-template.md
+- ✅ README.md
+- ✅ AGENTS.md
+- ⚠ pending: .specify/templates/commands/*.md (directory not present in this repo)
+Follow-up TODOs:
+- None
+-->
+
+# HermesYoutubeCurator Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Prefer One Simple Path
+Every feature MUST begin with the simplest execution path that solves the real
+requirement. If an approach does not work, it MUST be removed or replaced, not
+kept behind a fallback branch, alternate flow, or speculative abstraction.
+Multiple branches for the same execution are allowed only when the user-facing
+requirement itself demands them and the distinction is explicit in the spec.
+Rationale: a single path is easier to reason about, debug, and maintain.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Stay Close to the Proven Stack
+The default stack MUST remain close to this repository's current shape: Python,
+API-oriented libraries, Playwright when browser automation is required, and
+Markdown-based skills and agent guidance. New frameworks, orchestration layers,
+or infrastructure-heavy subsystems MUST be rejected unless the simpler stack
+cannot satisfy a concrete requirement recorded in the plan. Rationale: this
+project values leverage from familiar tools over novelty or architectural reach.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Separate Concerns with Deep Modules
+New behavior MUST be introduced behind small, explicit interfaces and placed in
+separate modules when it represents a distinct concern. Modules SHOULD be deep:
+they SHOULD hide substantial behavior behind a simple API instead of spreading
+logic across many shallow helpers. Plans and specs MUST describe the seams
+between modules so responsibilities stay clear. Rationale: clean seams reduce
+coupling and make change safer.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Test the Seams
+When tests are justified, they MUST verify the seams between modules, adapters,
+and external dependencies rather than private implementation details. Unit or
+integration labels matter less than the target: tests MUST exercise contracts,
+data flow, and failure handling at module boundaries. Tests that mainly mirror
+internal code structure SHOULD be rejected. Rationale: seam-focused tests stay
+stable while still protecting behavior that matters.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Verify Against Current Sources
+Engineers MUST not rely on memory for nontrivial library, API, or framework
+behavior. Before implementation, they MUST consult current documentation and
+SHOULD prefer primary sources such as official docs, upstream repositories, or
+local installed source when available. Plans, research notes, or implementation
+notes MUST record the sources consulted for decisions that depend on external
+behavior. Rationale: current source verification is the only reliable guard
+against stale assumptions.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Engineering Boundaries
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- Prefer direct Python modules, small adapters, and explicit data flow over
+  global orchestration or hidden control paths.
+- Reject speculative extensibility, generic plugin systems, or extra layers
+  unless the current feature requires them now.
+- Keep repository structure legible; new modules must have a clear owner
+  concern and a narrow public surface.
+- External services and libraries must be wrapped at the seam where the project
+  depends on them so callers use project-shaped interfaces rather than vendor
+  details.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Delivery Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- Every specification MUST state the simplest acceptable implementation and any
+  stack constraints before design work expands.
+- Every implementation plan MUST include a constitution check covering
+  simplicity, stack fit, module seams, seam-focused testing, and source
+  verification.
+- When a new dependency or unfamiliar API is involved, the relevant current
+  documentation or source reference MUST be captured in the plan, research, or
+  task artifacts before coding proceeds.
+- Code review and self-review MUST reject changes that preserve failed ideas as
+  fallbacks, mix unrelated concerns, or add tests away from the architectural
+  seams.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution overrides local habit and template defaults. Amendments
+require updating this file, recording the rationale in the Sync Impact Report,
+and propagating the change to affected templates and guidance documents in the
+same change set when possible.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+Versioning policy follows semantic versioning for governance:
+- MAJOR for incompatible principle removals or redefinitions.
+- MINOR for new principles or materially expanded obligations.
+- PATCH for clarifications that do not change expected behavior.
+
+Compliance review is mandatory during planning, implementation, and review.
+Every plan, task list, and merge-ready change MUST show how it satisfies the
+principles above or explicitly justify a narrow exception.
+
+**Version**: 1.0.0 | **Ratified**: 2026-05-26 | **Last Amended**: 2026-05-26

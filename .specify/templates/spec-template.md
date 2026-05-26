@@ -126,3 +126,17 @@
 - [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
 - [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
 - [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+
+## Implementation Constraints
+
+- **IC-001**: The solution MUST describe a single primary execution path for
+  each required behavior. Rejected approaches or failed experiments MUST not be
+  retained as fallback branches unless the requirement explicitly demands them.
+- **IC-002**: The solution MUST prefer the repository's existing stack shape
+  and justify any new framework, subsystem, or infrastructure layer.
+- **IC-003**: The design MUST identify the main module seams and assign one
+  clear concern to each module or adapter.
+- **IC-004**: If tests are requested or required, they MUST target behavior at
+  module seams, external adapters, or contracts rather than private internals.
+- **IC-005**: Any behavior that depends on third-party libraries or APIs MUST
+  be marked for current documentation/source verification during planning.

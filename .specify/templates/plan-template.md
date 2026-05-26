@@ -31,7 +31,16 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Simplicity: confirm the plan uses the smallest viable design and does not
+  preserve fallback or alternate execution branches for the same behavior.
+- Stack Fit: confirm chosen tools stay close to the repository's Python +
+  API-lib + Playwright + Markdown guidance baseline, or justify each deviation.
+- Module Seams: identify each new module, its single concern, and the simple
+  interface it exposes to the rest of the system.
+- Testing Seams: identify only the boundary tests needed to protect module
+  contracts, adapter behavior, and external integrations.
+- Source Verification: list the current documentation, upstream repository
+  pages, or local installed source inspected for every nontrivial dependency.
 
 ## Project Structure
 
@@ -100,5 +109,5 @@ directories captured above]
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| [e.g., extra execution branch] | [current need] | [why one path cannot satisfy the requirement] |
+| [e.g., new framework/subsystem] | [specific problem] | [why the existing stack is insufficient] |
