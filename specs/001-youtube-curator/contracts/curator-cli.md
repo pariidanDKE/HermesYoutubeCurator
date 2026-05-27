@@ -1,6 +1,32 @@
 # Contract: Curator CLI Entry Points
 
-These commands are internal operator-facing interfaces. Exact flag names may evolve, but the contract below defines the required behavior and output expectations.
+These commands are internal operator-facing interfaces. They are deterministic program entrypoints, not freeform agent tools. Exact flag names may evolve, but the contract below defines the required behavior and output expectations.
+
+These CLI entrypoints are orchestration surfaces, not prescriptions for one top-level package per command. They may compose a smaller number of deeper modules internally.
+
+## `morning-run`
+
+**Purpose**: Execute the full scheduled pipeline from collection through curation.
+
+**Inputs**:
+- Access to configured runtime dependencies
+- Access to a valid signed-in browser session
+- Active scheduler or equivalent manual invocation context
+
+**Behavior**:
+- Starts a new run record
+- Executes homepage and history collection
+- Executes enrichment selection
+- Executes deep enrichment for selected candidates
+- Executes curation and report generation
+- Returns a machine-readable run summary
+
+**Outputs**:
+- `run_status`
+- `run_id`
+- `digest_id` when curation occurs
+- `report_artifact_path`
+- `warnings[]`
 
 ## `refresh-home`
 
@@ -44,12 +70,34 @@ These commands are internal operator-facing interfaces. Exact flag names may evo
 - `artifact_path`
 - `warnings[]`
 
-## `enrich-videos`
+## `select-enrichment`
 
-**Purpose**: Enrich collected video items with metadata, descriptions, and transcripts when available.
+**Purpose**: Produce a bounded selection of video IDs that deserve deeper enrichment.
 
 **Inputs**:
-- Set of collected video identifiers or unresolved canonical videos
+- Latest recommendation snapshot
+- Latest history snapshot if available
+- Relevant preference memory and historical artifacts
+
+**Behavior**:
+- Evaluates collected candidates against current context
+- Decides `enrich_now`, `defer`, or `skip` for each relevant candidate
+- Records reasons for the selection decisions
+- Writes a structured enrichment-selection artifact
+
+**Outputs**:
+- `run_status`
+- `selection_id`
+- `selected_video_ids[]`
+- `artifact_path`
+- `warnings[]`
+
+## `enrich-videos`
+
+**Purpose**: Enrich selected video items with metadata, descriptions, and transcripts when available.
+
+**Inputs**:
+- Set of selected video identifiers or unresolved canonical videos
 
 **Behavior**:
 - Fetches metadata enrichment for target videos
@@ -71,6 +119,8 @@ These commands are internal operator-facing interfaces. Exact flag names may evo
 **Inputs**:
 - Latest recommendation snapshot
 - Latest history snapshot if available
+- Latest enrichment-selection artifact
+- Enriched video details for selected candidates
 - Relevant prior memory and historical artifacts
 
 **Behavior**:

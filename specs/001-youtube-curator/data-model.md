@@ -1,5 +1,7 @@
 # Data Model: YouTube Curator
 
+These entities describe durable records and artifacts. They are not a one-to-one prescription for top-level modules. Multiple entities can and should live behind the same deep module when they share a stable responsibility or dependency boundary.
+
 ## Recommendation Snapshot
 
 **Purpose**: Captures the state of the signed-in YouTube home feed for a single collection run.
@@ -59,6 +61,7 @@
 
 **Relationships**:
 - Belongs to one `Recommendation Snapshot`
+- May have one `Enrichment Selection Item`
 - May have one `Video Content Detail`
 - May link to one `Canonical Video`
 
@@ -104,10 +107,51 @@
 **Relationships**:
 - Can be referenced by many `Recommendation Item`
 - Can be referenced by many `History Item`
+- Can be referenced by many `Enrichment Selection Item`
 - Has zero or one `Video Content Detail`
 
 **Validation Rules**:
 - `video_id` should be unique when available
+
+## Enrichment Selection
+
+**Purpose**: Records one agent-assisted decision pass that prioritizes which candidate videos deserve deeper enrichment for a run.
+
+**Fields**:
+- `selection_id`: stable unique identifier
+- `run_id`: parent run
+- `selected_at`: timestamp of the decision
+- `selection_model`: reasoning backend identifier used for the decision
+- `selection_summary`: short explanation of overall prioritization
+- `artifact_path`: path to the stored selection artifact when persisted separately
+
+**Relationships**:
+- Belongs to one `Collection Run`
+- Has many `Enrichment Selection Item`
+
+**Validation Rules**:
+- `selected_at` is required
+
+## Enrichment Selection Item
+
+**Purpose**: Stores the decision for a single candidate video in the enrichment-selection pass.
+
+**Fields**:
+- `selection_item_id`: stable unique identifier
+- `selection_id`: parent selection
+- `canonical_video_id`: chosen canonical video reference when available
+- `video_id`: platform video identifier when canonicalization is not complete
+- `decision`: `enrich_now`, `defer`, or `skip`
+- `priority_score`: normalized priority value when available
+- `reason`: user-facing explanation grounded in current context
+
+**Relationships**:
+- Belongs to one `Enrichment Selection`
+- May reference one `Canonical Video`
+
+**Validation Rules**:
+- `decision` must be one of the supported selection outcomes
+- At least one of `canonical_video_id` or `video_id` must exist
 
 ## Video Content Detail
 
@@ -127,6 +171,25 @@
 **Validation Rules**:
 - At least one of `description_text` or `transcript_text` should exist for a successful enriched record
 
+## Delivery Target
+
+**Purpose**: Represents a configured Hermes messaging destination for curator output.
+
+**Fields**:
+- `delivery_target_id`: stable unique identifier
+- `platform`: `telegram`
+- `target_identifier`: platform-specific chat, user, or channel identifier
+- `target_label`: human-readable label for the destination
+- `is_primary`: whether this is the preferred delivery target
+- `is_enabled`: whether delivery to this target is active
+
+**Relationships**:
+- Can be referenced by many `Delivery Record`
+
+**Validation Rules**:
+- `platform` must be `telegram` in v1
+- Only one enabled target should be marked primary per curator profile
+
 ## Collection Run
 
 **Purpose**: Top-level record of one scheduled or manual system run.
@@ -143,6 +206,7 @@
 **Relationships**:
 - Has zero or one `Recommendation Snapshot`
 - Has zero or one `Recent Watch History Snapshot`
+- Has zero or one `Enrichment Selection`
 - Has zero or one `Curation Digest`
 
 **Validation Rules**:
@@ -162,14 +226,15 @@
 - `save_list`: recommended items to save for later
 - `skip_list`: items explicitly deprioritized
 - `history_influence_notes`: explanation of how recent viewing influenced the ranking
-- `confidence_level`: qualitative confidence label
 - `artifact_path`: path to stored report artifact
+- `confidence_level`: qualitative confidence label
 
 **Relationships**:
 - Belongs to one `Collection Run`
 - May reference many `Canonical Video`
 - May contain many `Idea Proposal`
 - May contain many `Preference Memory Proposal`
+- May have many `Delivery Record`
 
 **Validation Rules**:
 - `generated_at` is required
@@ -208,3 +273,32 @@
 **Validation Rules**:
 - `status` defaults to `pending`
 - Approved proposals must have an approval timestamp once implemented
+
+## Delivery Record
+
+**Purpose**: Records the outcome of attempting to deliver a digest to a messaging target.
+
+**Fields**:
+- `delivery_record_id`: stable unique identifier
+- `digest_id`: parent digest
+- `delivery_target_id`: target destination
+- `attempted_at`: timestamp of the delivery attempt
+- `delivery_status`: `sent`, `failed`, or `skipped`
+- `failure_reason`: explanation when delivery fails
+- `platform_message_id`: platform-specific message identifier when available
+
+**Relationships**:
+- Belongs to one `Curation Digest`
+- Belongs to one `Delivery Target`
+
+**Validation Rules**:
+- `attempted_at` is required
+- `delivery_status` must be one of the supported outcomes
+
+## Suggested Module Ownership
+
+- `youtube` owns collection-facing and enrichment-facing records such as `Recommendation Snapshot`, `Recent Watch History Snapshot`, `Recommendation Item`, `History Item`, `Canonical Video`, and `Video Content Detail`.
+- `curation` owns `Enrichment Selection`, `Enrichment Selection Item`, `Curation Digest`, and any derived `Idea Proposal` or `Preference Memory Proposal` content.
+- `delivery` owns delivery transport behavior and `Delivery Record` creation.
+- `persistence` owns storage and retrieval of all of the above records without becoming the place where business decisions are made.
+- `pipeline` coordinates these records across a run but should remain thin; their existence does not imply separate top-level stage modules.
