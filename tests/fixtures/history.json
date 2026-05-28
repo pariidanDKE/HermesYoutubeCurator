@@ -1,0 +1,13 @@
+{
+  "history_items": [
+    {
+      "video_id": "vid-3",
+      "title": "Yesterday's topic again",
+      "channel_name": "Hermes Lab",
+      "url": "https://youtube.com/watch?v=vid-3",
+      "watched_at_hint": "2 hours ago",
+      "recency_bucket": "same-day",
+      "display_position": 1
+    }
+  ]
+}

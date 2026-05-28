@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-youtube-curator"
+version = "0.1.0"
+description = "Deterministic YouTube curation pipeline with Hermes-facing seams."
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.52.0",
+    "pytest>=9.0.3",
+    "youtube-transcript-api>=1.2.4",
+]
+
+[project.scripts]
+hermes-youtube-curator = "hermes_youtube_curator.cli.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]

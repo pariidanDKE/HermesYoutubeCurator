@@ -1,0 +1,26 @@
+{
+  "recommendations": [
+    {
+      "video_id": "vid-1",
+      "title": "Practical agent design",
+      "channel_name": "Hermes Lab",
+      "url": "https://youtube.com/watch?v=vid-1",
+      "display_position": 1,
+      "description_excerpt": "Designing bounded agent loops."
+    },
+    {
+      "video_id": "vid-2",
+      "title": "SQLite for local apps",
+      "channel_name": "Data Craft",
+      "url": "https://youtube.com/watch?v=vid-2",
+      "display_position": 2
+    },
+    {
+      "video_id": "vid-3",
+      "title": "Yesterday's topic again",
+      "channel_name": "Hermes Lab",
+      "url": "https://youtube.com/watch?v=vid-3",
+      "display_position": 3
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "videos": [
+    {
+      "video_id": "vid-1",
+      "title": "Practical agent design",
+      "channel_name": "Hermes Lab",
+      "metadata_status": "available",
+      "description_text": "A deterministic agent workflow overview.",
+      "transcript_status": "available",
+      "transcript_text": "Transcript text for vid-1."
+    },
+    {
+      "video_id": "vid-2",
+      "title": "SQLite for local apps",
+      "channel_name": "Data Craft",
+      "metadata_status": "available",
+      "description_text": "Patterns for durable local state.",
+      "transcript_status": "unavailable"
+    }
+  ]
+}

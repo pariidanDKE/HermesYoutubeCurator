@@ -212,6 +212,14 @@
 - Current Hermes configuration and CLI references for messaging platforms.
 - Current Hermes WhatsApp setup docs if the stretch goal is pursued later.
 
+## Implementation Notes: current repo path
+
+- The implemented repo path keeps one deterministic pipeline: `refresh-home` -> `refresh-history` -> `select-enrichment` -> `enrich-videos` -> `run-curator` -> Telegram delivery.
+- No MCP layer was added for enrichment or delivery. Transcript-aware guidance lives in `skills/youtube-curator/SKILL.md`, which explicitly points Hermes at the bundled `youtube-content` skill as the preferred transcript workflow.
+- No snapshot-diff skip branch was added. The curator only skips when there is not enough evidence to curate, not because the newest snapshot resembles a previous one.
+- Hermes cron is the preferred recurring scheduler in the implementation docs and setup script. OS cron and systemd examples remain operator-facing fallback infrastructure, not agent-owned wake-up logic.
+- Hermes profile isolation and long-term mutation remain conservative in the current implementation: message framing is skill-driven, memory proposals stay approval-gated in digest output, and there is no autonomous skill or memory rewriting path in the normal run flow.
+
 ## Local inference notes: Qwen3.6-27B on RTX 3090 (24 GB)
 
 **Chosen checkpoint**: `QuantTrio/Qwen3.6-27B-AWQ` — INT4 AWQ, group_size 128, zero_point=True (GEMM kernel, not Marlin). Attention projections (q/k/v), first layer, and linear attention components are intentionally kept in full precision by the quantizer. This is a quality-first choice: asymmetric quantization with unquantized attention preserves reasoning fidelity at the cost of Marlin kernel compatibility and a slightly higher VRAM footprint.

@@ -1,0 +1,7 @@
+[Unit]
+Description=Hermes YouTube Curator
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/dan-parii/Documents/HermesYoutubeCurator
+ExecStart=/usr/bin/env python3 scripts/morning_run.py

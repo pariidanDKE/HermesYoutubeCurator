@@ -1,0 +1,1 @@
+0 8 * * * cd /home/dan-parii/Documents/HermesYoutubeCurator && ./scripts/morning_run.py

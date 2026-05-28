@@ -17,13 +17,13 @@
 
 **Purpose**: Create the Python project skeleton and capture the verified integration references needed before implementation.
 
-- [ ] T001 Create the application package and test directory skeleton in `src/hermes_youtube_curator/__init__.py`, `src/hermes_youtube_curator/cli/__init__.py`, `src/hermes_youtube_curator/pipeline/__init__.py`, `src/hermes_youtube_curator/youtube/__init__.py`, `src/hermes_youtube_curator/curation/__init__.py`, `src/hermes_youtube_curator/persistence/__init__.py`, `src/hermes_youtube_curator/delivery/__init__.py`, `tests/contract/__init__.py`, and `tests/integration/__init__.py`
-- [ ] T002 Initialize the Python project metadata and runtime dependencies in `pyproject.toml`
-- [ ] T003 [P] Add environment and path configuration scaffolding in `src/hermes_youtube_curator/config/settings.py` and `.env.example`
-- [ ] T004 [P] Configure linting and pytest defaults in `pyproject.toml` and `tests/conftest.py`
-- [ ] T005 [P] Record current source-verified setup notes for Playwright, Hermes Agent, the bundled `youtube-content` skill, Hermes Telegram, YouTube Data API, `youtube-transcript-api`, and vLLM in `specs/001-youtube-curator/research.md`
-- [ ] T054 [P] Create the Hermes curator skill for Telegram message framing, section order, top/bottom guidance, and link inclusion policy in `skills/youtube-curator/SKILL.md`
-- [ ] T056 [P] Evaluate Hermes profile isolation, memory persistence, skill loading/mutation behavior, Hermes cron setup, and bundled `youtube-content` reuse for this project in `specs/001-youtube-curator/research.md` and `specs/001-youtube-curator/quickstart.md`
+- [X] T001 Create the application package and test directory skeleton in `src/hermes_youtube_curator/__init__.py`, `src/hermes_youtube_curator/cli/__init__.py`, `src/hermes_youtube_curator/pipeline/__init__.py`, `src/hermes_youtube_curator/youtube/__init__.py`, `src/hermes_youtube_curator/curation/__init__.py`, `src/hermes_youtube_curator/persistence/__init__.py`, `src/hermes_youtube_curator/delivery/__init__.py`, `tests/contract/__init__.py`, and `tests/integration/__init__.py`
+- [X] T002 Initialize the Python project metadata and runtime dependencies in `pyproject.toml`
+- [X] T003 [P] Add environment and path configuration scaffolding in `src/hermes_youtube_curator/config/settings.py` and `.env.example`
+- [X] T004 [P] Configure linting and pytest defaults in `pyproject.toml` and `tests/conftest.py`
+- [X] T005 [P] Record current source-verified setup notes for Playwright, Hermes Agent, the bundled `youtube-content` skill, Hermes Telegram, YouTube Data API, `youtube-transcript-api`, and vLLM in `specs/001-youtube-curator/research.md`
+- [X] T054 [P] Create the Hermes curator skill for Telegram message framing, section order, top/bottom guidance, and link inclusion policy in `skills/youtube-curator/SKILL.md`
+- [X] T056 [P] Evaluate Hermes profile isolation, memory persistence, skill loading/mutation behavior, Hermes cron setup, and bundled `youtube-content` reuse for this project in `specs/001-youtube-curator/research.md` and `specs/001-youtube-curator/quickstart.md`
 
 ---
 
@@ -33,16 +33,16 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Define shared Pydantic-style domain models for runs, snapshots, selections, digests, and delivery records in `src/hermes_youtube_curator/models.py`
-- [ ] T007 [P] Implement artifact serialization and JSON storage helpers in `src/hermes_youtube_curator/persistence/artifacts.py`
-- [ ] T008 [P] Implement SQLite schema initialization and repository scaffolding for runs, videos, digests, and deliveries in `src/hermes_youtube_curator/persistence/sqlite_store.py`
-- [ ] T009 [P] Implement structured logging and machine-readable result helpers for CLI commands in `src/hermes_youtube_curator/cli/results.py`
-- [ ] T010 [P] Implement the deterministic orchestration context and dependency wiring in `src/hermes_youtube_curator/pipeline/context.py`
-- [ ] T011 [P] Create CLI entrypoint wrappers for `morning-run`, `refresh-home`, `refresh-history`, `select-enrichment`, `enrich-videos`, and `run-curator` in `src/hermes_youtube_curator/cli/main.py`
-- [ ] T012 Implement command exit-code gates and result validation shared by all entrypoints in `src/hermes_youtube_curator/cli/guards.py`
-- [ ] T013 [P] Add contract tests for CLI machine-readable outputs defined in `specs/001-youtube-curator/contracts/curator-cli.md` in `tests/contract/test_cli_contracts.py`
-- [ ] T014 [P] Add artifact contract tests for snapshot, selection, digest, and delivery records from `specs/001-youtube-curator/contracts/snapshot-artifacts.md` in `tests/contract/test_artifact_contracts.py`
-- [ ] T015 Add integration tests for shared CLI guards and run-summary failure handling in `tests/integration/test_cli_guards.py`
+- [X] T006 Define shared Pydantic-style domain models for runs, snapshots, selections, digests, and delivery records in `src/hermes_youtube_curator/models.py`
+- [X] T007 [P] Implement artifact serialization and JSON storage helpers in `src/hermes_youtube_curator/persistence/artifacts.py`
+- [X] T008 [P] Implement SQLite schema initialization and repository scaffolding for runs, videos, digests, and deliveries in `src/hermes_youtube_curator/persistence/sqlite_store.py`
+- [X] T009 [P] Implement structured logging and machine-readable result helpers for CLI commands in `src/hermes_youtube_curator/cli/results.py`
+- [X] T010 [P] Implement the deterministic orchestration context and dependency wiring in `src/hermes_youtube_curator/pipeline/context.py`
+- [X] T011 [P] Create CLI entrypoint wrappers for `morning-run`, `refresh-home`, `refresh-history`, `select-enrichment`, `enrich-videos`, and `run-curator` in `src/hermes_youtube_curator/cli/main.py`
+- [X] T012 Implement command exit-code gates and result validation shared by all entrypoints in `src/hermes_youtube_curator/cli/guards.py`
+- [X] T013 [P] Add contract tests for CLI machine-readable outputs defined in `specs/001-youtube-curator/contracts/curator-cli.md` in `tests/contract/test_cli_contracts.py`
+- [X] T014 [P] Add artifact contract tests for snapshot, selection, digest, and delivery records from `specs/001-youtube-curator/contracts/snapshot-artifacts.md` in `tests/contract/test_artifact_contracts.py`
+- [X] T015 Add integration tests for shared CLI guards and run-summary failure handling in `tests/integration/test_cli_guards.py`
 
 **Checkpoint**: Foundation ready; deterministic commands and shared artifacts exist behind stable seams.
 
@@ -56,22 +56,22 @@
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add integration tests for homepage collection and snapshot persistence in `tests/integration/test_refresh_home.py`
-- [ ] T017 [P] [US1] Add integration tests for history collection and recency signal persistence in `tests/integration/test_refresh_history.py`
-- [ ] T018 [P] [US1] Add integration tests for the full `morning-run` happy path and partial-evidence path in `tests/integration/test_morning_run.py`
-- [ ] T019 [P] [US1] Add contract tests for Telegram delivery records and transport outcomes in `tests/contract/test_delivery_contracts.py`
+- [X] T016 [P] [US1] Add integration tests for homepage collection and snapshot persistence in `tests/integration/test_refresh_home.py`
+- [X] T017 [P] [US1] Add integration tests for history collection and recency signal persistence in `tests/integration/test_refresh_history.py`
+- [X] T018 [P] [US1] Add integration tests for the full `morning-run` happy path and partial-evidence path in `tests/integration/test_morning_run.py`
+- [X] T019 [P] [US1] Add contract tests for Telegram delivery records and transport outcomes in `tests/contract/test_delivery_contracts.py`
 
 ### Implementation for User Story 1
 
 - [ ] T020 [P] [US1] Implement signed-in homepage collection with Playwright in `src/hermes_youtube_curator/youtube/home_collector.py`
 - [ ] T021 [P] [US1] Implement recent watch-history collection with Playwright in `src/hermes_youtube_curator/youtube/history_collector.py`
-- [ ] T023 [US1] Implement the `refresh-home` command flow and machine-readable output in `src/hermes_youtube_curator/cli/refresh_home.py`
-- [ ] T024 [US1] Implement the `refresh-history` command flow and machine-readable output in `src/hermes_youtube_curator/cli/refresh_history.py`
+- [X] T023 [US1] Implement the `refresh-home` command flow and machine-readable output in `src/hermes_youtube_curator/cli/refresh_home.py`
+- [X] T024 [US1] Implement the `refresh-history` command flow and machine-readable output in `src/hermes_youtube_curator/cli/refresh_history.py`
 - [ ] T025 [US1] Implement Hermes curator invocation and digest synthesis using local artifacts in `src/hermes_youtube_curator/curation/curator_service.py`
 - [ ] T026 [US1] Implement deterministic Telegram delivery through Hermes in `src/hermes_youtube_curator/delivery/telegram.py`
-- [ ] T027 [US1] Implement the `run-curator` command flow in `src/hermes_youtube_curator/cli/run_curator.py`
-- [ ] T028 [US1] Implement the end-to-end `morning-run` orchestration in `src/hermes_youtube_curator/cli/morning_run.py`
-- [ ] T029 [US1] Add operator documentation for the MVP command sequence and required env vars in `specs/001-youtube-curator/quickstart.md`
+- [X] T027 [US1] Implement the `run-curator` command flow in `src/hermes_youtube_curator/cli/run_curator.py`
+- [X] T028 [US1] Implement the end-to-end `morning-run` orchestration in `src/hermes_youtube_curator/cli/morning_run.py`
+- [X] T029 [US1] Add operator documentation for the MVP command sequence and required env vars in `specs/001-youtube-curator/quickstart.md`
 
 **Checkpoint**: User Story 1 is functional; the system can collect evidence, generate a digest, and record deterministic Telegram delivery.
 
@@ -85,20 +85,20 @@
 
 ### Tests for User Story 2
 
-- [ ] T030 [P] [US2] Add integration tests for enrichment selection decisions and stored reasons in `tests/integration/test_select_enrichment.py`
-- [ ] T031 [P] [US2] Add integration tests for metadata/transcript enrichment partial-success behavior in `tests/integration/test_enrich_videos.py`
-- [ ] T032 [P] [US2] Add contract tests for bundled `youtube-content` transcript integration and enrichment artifact behavior in `tests/contract/test_enrichment_contracts.py`
+- [X] T030 [P] [US2] Add integration tests for enrichment selection decisions and stored reasons in `tests/integration/test_select_enrichment.py`
+- [X] T031 [P] [US2] Add integration tests for metadata/transcript enrichment partial-success behavior in `tests/integration/test_enrich_videos.py`
+- [X] T032 [P] [US2] Add contract tests for bundled `youtube-content` transcript integration and enrichment artifact behavior in `tests/contract/test_enrichment_contracts.py`
 
 ### Implementation for User Story 2
 
-- [ ] T033 [P] [US2] Implement canonical video linking and enrichment selection repositories in `src/hermes_youtube_curator/persistence/video_store.py`
+- [X] T033 [P] [US2] Implement canonical video linking and enrichment selection repositories in `src/hermes_youtube_curator/persistence/video_store.py`
 - [ ] T034 [P] [US2] Implement deterministic metadata enrichment adapters and preferred bundled-skill transcript integration in `src/hermes_youtube_curator/youtube/enrichment.py`
 - [ ] T035 [US2] Implement Hermes-driven enrichment selection in `src/hermes_youtube_curator/curation/selection_service.py`
-- [ ] T036 [US2] Implement the `select-enrichment` command flow in `src/hermes_youtube_curator/cli/select_enrichment.py`
-- [ ] T037 [US2] Implement the `enrich-videos` command flow in `src/hermes_youtube_curator/cli/enrich_videos.py`
-- [ ] T038 [US2] Integrate bundled `youtube-content` usage into `skills/youtube-curator/SKILL.md`, adding supplemental local skill steps only if required
-- [ ] T039 [US2] Add Hermes curator skill setup commands and transcript dependency guidance in `scripts/setup_hermes_curator.sh`
-- [ ] T040 [US2] Update curator synthesis to consume enriched descriptions and transcripts in `src/hermes_youtube_curator/curation/curator_service.py`
+- [X] T036 [US2] Implement the `select-enrichment` command flow in `src/hermes_youtube_curator/cli/select_enrichment.py`
+- [X] T037 [US2] Implement the `enrich-videos` command flow in `src/hermes_youtube_curator/cli/enrich_videos.py`
+- [X] T038 [US2] Integrate bundled `youtube-content` usage into `skills/youtube-curator/SKILL.md`, adding supplemental local skill steps only if required
+- [X] T039 [US2] Add Hermes curator skill setup commands and transcript dependency guidance in `scripts/setup_hermes_curator.sh`
+- [X] T040 [US2] Update curator synthesis to consume enriched descriptions and transcripts in `src/hermes_youtube_curator/curation/curator_service.py`
 - [ ] T041 [US2] Document transcript helper usage, Hermes skill setup flow, and model-evaluation workflow in `specs/001-youtube-curator/quickstart.md`
 
 **Checkpoint**: User Story 2 is functional; Hermes can choose a bounded set of videos, use transcript and metadata helpers, and produce richer summaries.
@@ -133,7 +133,7 @@
 **Purpose**: Harden runtime behavior, validate the full operator workflow, and tighten documentation after the main stories are working.
 
 - [ ] T049 [P] Add fixture artifacts covering partial collection, repeated recommendations, and delivery failures in `tests/fixtures/`
-- [ ] T050 Add end-to-end run scripts and smoke checks for local operator use in `scripts/morning_run.py`, `scripts/refresh_home.py`, `scripts/refresh_history.py`, `scripts/select_enrichment.py`, `scripts/enrich_videos.py`, and `scripts/run_curator.py`
+- [X] T050 Add end-to-end run scripts and smoke checks for local operator use in `scripts/morning_run.py`, `scripts/refresh_home.py`, `scripts/refresh_history.py`, `scripts/select_enrichment.py`, `scripts/enrich_videos.py`, and `scripts/run_curator.py`
 - [ ] T051 [P] Add delivery retry, idempotency, and failure-recording hardening in `src/hermes_youtube_curator/delivery/telegram.py`
 - [ ] T052 [P] Add schema migration notes and backup/restore guidance for local state in `specs/001-youtube-curator/quickstart.md`
 - [ ] T053 Run quickstart validation and update operator-facing setup instructions in `specs/001-youtube-curator/quickstart.md`
