@@ -51,3 +51,7 @@ def main(argv: list[str] | None = None) -> int:
 
         sys.stdout.write(json.dumps(payload, indent=2) + "\n")
     return 0 if payload.get("run_status") != "failed" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -177,7 +177,7 @@ the source of truth for the next implementation pass.
 **Purpose**: Harden runtime behavior, validate the full operator workflow, and tighten documentation after the main stories are working.
 
 - [ ] T049 [P] Add fixture artifacts covering partial collection, repeated recommendations, and delivery failures in `tests/fixtures/`
-- [X] T050 Add end-to-end run scripts and smoke checks for local operator use in `scripts/morning_run.py`, `scripts/refresh_home.py`, `scripts/refresh_history.py`, `scripts/select_enrichment.py`, `scripts/enrich_videos.py`, and `scripts/run_curator.py`
+- [X] T050 Add end-to-end CLI smoke checks for local operator use through `python3 -m hermes_youtube_curator.cli.main`
 - [ ] T051 [P] Add delivery retry, idempotency, and failure-recording hardening in `src/hermes_youtube_curator/delivery/telegram.py`
 - [ ] T052 [P] Add schema migration notes and backup/restore guidance for local state in `specs/001-youtube-curator/quickstart.md`
 - [ ] T053 Run quickstart validation and update operator-facing setup instructions in `specs/001-youtube-curator/quickstart.md`

@@ -15,12 +15,12 @@
 
 ## 3. Run the deterministic pipeline
 
-- Homepage snapshot: `python3 scripts/refresh_home.py`
-- History snapshot: `python3 scripts/refresh_history.py`
-- Selection: `python3 scripts/select_enrichment.py`
-- Enrichment: `python3 scripts/enrich_videos.py`
-- Curation: `python3 scripts/run_curator.py`
-- Full run: `python3 scripts/morning_run.py`
+- Homepage snapshot: `python3 -m hermes_youtube_curator.cli.main refresh-home`
+- History snapshot: `python3 -m hermes_youtube_curator.cli.main refresh-history`
+- Selection: `python3 -m hermes_youtube_curator.cli.main select-enrichment`
+- Enrichment: `python3 -m hermes_youtube_curator.cli.main enrich-videos`
+- Curation: `python3 -m hermes_youtube_curator.cli.main run-curator`
+- Full run: `python3 -m hermes_youtube_curator.cli.main morning-run`
 
 ## 4. Expected behavior
 
@@ -33,7 +33,7 @@
 ## 5. Scheduling
 
 - Preferred path: Hermes cron.
-- Example: `hermes cron add "0 8 * * *" -- ./scripts/morning_run.py`
+- Example: `hermes cron add "0 8 * * *" -- python3 -m hermes_youtube_curator.cli.main morning-run`
 - Fallback operator examples live in `ops/cron/youtube-curator.cron` and `ops/systemd/`.
 
 ## 6. Guardrails
@@ -44,5 +44,5 @@
 
 ## 7. Validation
 
-- Smoke check: run `python3 scripts/morning_run.py` with the sample fixtures from `.env.example`.
+- Smoke check: run `python3 -m hermes_youtube_curator.cli.main morning-run` with the sample fixtures from `.env.example`.
 - Verification command: `uv run --with pytest --with ruff sh -lc 'ruff check . && pytest'`
