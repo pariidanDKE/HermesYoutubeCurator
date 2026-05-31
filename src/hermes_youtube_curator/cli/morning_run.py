@@ -20,7 +20,7 @@ def run_morning_run(context: AppContext) -> dict[str, object]:
     selection_result, selection = run_select_enrichment(context, run)
     enrich_result, details = run_enrich_videos(context, selection)
     snapshot = context.home_collector.collect(context.settings)
-    history = context.history_collector.collect(context.settings.history_fixture)
+    history = context.history_collector.collect(context.settings)
     curator_result, digest = run_curator(context, snapshot, history, selection, details)
 
     warnings = [

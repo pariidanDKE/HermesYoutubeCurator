@@ -114,6 +114,17 @@
 **Source verification required before implementation**:
 - Current SQLite library usage guidance for the selected Python client and concurrency expectations in this project shape.
 
+## Decision 7A: Keep SQLite authoritative and defer LLM Wiki/Hermes memory to a derived layer
+
+**Decision**: Keep SQLite plus JSON artifacts as the only authoritative persistence layer for the live pipeline now. Defer any Karpathy-style LLM Wiki or Hermes-managed long-term memory layer to a later, explicitly approved adjunct derived from stored artifacts rather than replacing them.
+
+**Comparison**:
+- **SQLite event/artifact index**: auditable, deterministic, easy to query across runs, easy to back up locally, and already aligned with the implemented `persistence/` seam.
+- **LLM Wiki / Hermes memory layer**: stronger for agent-readable taste summaries and cross-run narrative context, but less transparent as a source of truth and higher-risk before the review/approval loop exists.
+- **Hybrid approach**: still attractive later, but only after the base curator proves its evidence flow and after memory proposals plus approval states are implemented.
+
+**Rationale**: The current highest-risk work is getting the live collection and Hermes-driven curation loop reliable. SQLite and JSON snapshots preserve raw evidence and structured outputs with minimal operational complexity. An LLM Wiki derived from those artifacts remains a good future enhancement for read-optimized taste memory, but using it as the primary system of record now would add an opaque second persistence model before the User Story 3 guardrails exist.
+
 ## Decision 8: Treat recommendation feed and recent watch history as separate but linked input streams
 
 **Decision**: Model homepage recommendations and recent watch history as separate snapshots that can be merged during selection and curation.

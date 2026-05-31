@@ -18,7 +18,7 @@ def run_curator(
     details: list[VideoContentDetail] | None = None,
 ):
     snapshot = snapshot or context.home_collector.collect(context.settings)
-    history = history or context.history_collector.collect(context.settings.history_fixture)
+    history = history or context.history_collector.collect(context.settings)
     details = details or []
     digest, warnings, skip_reason = context.curator.curate(snapshot, history, selection, details)
     if digest is None:

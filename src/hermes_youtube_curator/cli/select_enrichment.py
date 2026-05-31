@@ -11,7 +11,7 @@ def run_select_enrichment(
 ):
     run = run or CollectionRun(trigger_type="manual", run_status="running")
     snapshot = context.home_collector.collect(context.settings)
-    history = context.history_collector.collect(context.settings.history_fixture)
+    history = context.history_collector.collect(context.settings)
     selection = context.selection.select(
         run.run_id,
         snapshot,

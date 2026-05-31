@@ -5,7 +5,7 @@ from hermes_youtube_curator.pipeline.context import AppContext
 
 
 def run_refresh_history(context: AppContext) -> dict[str, object]:
-    snapshot = context.history_collector.collect(context.settings.history_fixture)
+    snapshot = context.history_collector.collect(context.settings)
     artifact = context.artifacts.write("history", snapshot.history_snapshot_id, snapshot)
     return finalize_result(
         {
