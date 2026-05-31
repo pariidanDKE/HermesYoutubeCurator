@@ -23,6 +23,7 @@ class HomeCollector:
         warnings: list[str] = []
         try:
             with open_youtube_page(settings) as page:
+                page.goto(settings.youtube_home_url, wait_until="domcontentloaded")
                 session_state = ensure_signed_in(page)
                 recommendations = self._capture_homepage(page, settings)
                 if not recommendations:

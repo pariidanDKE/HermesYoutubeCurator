@@ -103,6 +103,7 @@ def app_context(tmp_path: Path, fixture_dir: Path) -> AppContext:
         history_fixture=fixture_dir / "history.json",
         enrichment_fixture=fixture_dir / "enrichment.json",
         telegram_outbox=state_dir / "telegram.log",
+        wiki_path=state_dir / "wiki",
         scheduler="hermes-cron",
         max_enrichment=2,
         telegram_fail_delivery=False,

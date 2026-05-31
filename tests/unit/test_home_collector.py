@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 
 from hermes_youtube_curator.config.settings import Settings
+import hermes_youtube_curator.youtube.home_collector as home_collector_module
 from hermes_youtube_curator.youtube.home_collector import HomeCollector
 
 
@@ -158,3 +160,40 @@ def test_capture_homepage_uses_meaningful_title_over_duration_overlay() -> None:
     assert items[0].duration_hint is None
     assert items[0].view_count_hint == "14M views"
     assert items[0].age_hint == "3 years ago"
+
+
+def test_collect_navigates_to_home_before_capture(monkeypatch) -> None:
+    collector = HomeCollector()
+    settings = Settings(
+        state_dir=Path("."),
+        artifact_dir=Path("./artifacts"),
+        sqlite_path=Path("./curator.db"),
+        home_fixture=None,
+        history_fixture=None,
+        enrichment_fixture=None,
+        telegram_outbox=None,
+        scheduler="test",
+        max_enrichment=1,
+        telegram_fail_delivery=False,
+        youtube_home_url="https://www.youtube.com/",
+    )
+    page = _FakePage([])
+    page.goto_calls = []
+
+    def goto(url: str, wait_until: str):
+        page.goto_calls.append((url, wait_until))
+
+    page.goto = goto
+
+    @contextmanager
+    def fake_open_youtube_page(_settings):
+        yield page
+
+    monkeypatch.setattr(home_collector_module, "open_youtube_page", fake_open_youtube_page)
+    monkeypatch.setattr(home_collector_module, "ensure_signed_in", lambda _page: "valid")
+    monkeypatch.setattr(collector, "_capture_homepage", lambda _page, _settings: [])
+    monkeypatch.setattr(collector, "_diagnose_empty_homepage", lambda _page: "empty")
+
+    collector.collect(settings)
+
+    assert page.goto_calls == [("https://www.youtube.com/", "domcontentloaded")]

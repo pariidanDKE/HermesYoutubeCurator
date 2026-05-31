@@ -5,6 +5,7 @@
 - Copy `.env.example` values into your shell or local env file.
 - Point `HYC_HOME_FIXTURE`, `HYC_HISTORY_FIXTURE`, and `HYC_ENRICHMENT_FIXTURE` at real collected artifacts or keep the sample `tests/fixtures/*.json` files for smoke testing.
 - Keep `HYC_SCHEDULER=hermes-cron` unless you intentionally switch to OS cron or systemd.
+- Optional: set `HYC_WIKI_PATH` to choose the Hermes-compatible wiki root. By default it is `.local/state/hermes-youtube-curator/wiki`.
 
 ## 2. Prepare Hermes
 
@@ -24,7 +25,8 @@
 ## 4. Expected behavior
 
 - Artifacts are written under `HYC_ARTIFACT_DIR` as JSON.
-- SQLite state is written to `HYC_SQLITE_PATH`.
+- Operational video, recommendation, and watch-history indexes are written under `HYC_WIKI_PATH/raw/curator/`.
+- Existing run/digest/delivery SQLite scaffolding still writes to `HYC_SQLITE_PATH` while downstream Hermes delivery work is unfinished.
 - Missing history, descriptions, or transcripts produce explicit partial warnings instead of aborting the entire run.
 - There is no snapshot-skip branch in the normal path. Curation runs whenever enough evidence exists.
 

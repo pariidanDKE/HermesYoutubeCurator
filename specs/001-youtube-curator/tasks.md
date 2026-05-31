@@ -40,12 +40,10 @@ the source of truth for the next implementation pass.
 
 ### Next Priorities
 
-- **P0**: Decide the persistence architecture before expanding downstream
-  behavior. Keep SQLite as the auditable event/artifact index candidate, but
-  explicitly evaluate a Karpathy-style LLM Wiki / Hermes memory layer for
-  agent-readable long-term taste, themes, and decisions. The LLM Wiki pattern is
-  a persistent Markdown/wiki knowledge layer compiled from raw sources by an
-  LLM, rather than a database-only or query-time RAG approach.
+- **P0**: Use the Hermes-compatible wiki raw/index layer as the current
+  persistence path for videos, recommendation events, watch-history events, and
+  run artifacts. SQLite remains only for existing run/digest/delivery scaffolding
+  until those flows are migrated or removed.
 - **P1**: Replace CLI skeleton flows with commands that invoke the actual
   Hermes agent path for selection and curation.
 - **P1**: Replace local Telegram outbox delivery with Hermes-agent Telegram
@@ -81,6 +79,7 @@ the source of truth for the next implementation pass.
 - [X] T006 Define shared Pydantic-style domain models for runs, snapshots, selections, digests, and delivery records in `src/hermes_youtube_curator/models.py`
 - [X] T007 [P] Implement artifact serialization and JSON storage helpers in `src/hermes_youtube_curator/persistence/artifacts.py`
 - [X] T008 [P] Implement SQLite schema initialization and repository scaffolding for runs, videos, digests, and deliveries in `src/hermes_youtube_curator/persistence/sqlite_store.py`
+- [X] T008A [P0] Implement Hermes-compatible wiki raw/index persistence for videos, recommendation events, watch-history events, and run artifacts in `src/hermes_youtube_curator/persistence/wiki_store.py`
 - [X] T009 [P] Implement structured logging and machine-readable result helpers for CLI commands in `src/hermes_youtube_curator/cli/results.py`
 - [X] T010 [P] Implement the deterministic orchestration context and dependency wiring in `src/hermes_youtube_curator/pipeline/context.py`
 - [X] T011 [P] Create CLI entrypoint wrappers for `morning-run`, `refresh-home`, `refresh-history`, `select-enrichment`, `enrich-videos`, and `run-curator` in `src/hermes_youtube_curator/cli/main.py`

@@ -7,6 +7,7 @@ from hermes_youtube_curator.pipeline.context import AppContext
 def run_refresh_home(context: AppContext) -> dict[str, object]:
     snapshot = context.home_collector.collect(context.settings)
     artifact = context.artifacts.write("snapshots", snapshot.snapshot_id, snapshot)
+    context.wiki.record_home_snapshot(snapshot, artifact_path=artifact)
     return finalize_result(
         {
             "run_status": "success" if snapshot.collection_status == "success" else "partial",

@@ -51,6 +51,7 @@ class HistoryCollector:
                 items = self._capture_history(page, settings)
                 if not items:
                     warnings.append(self._diagnose_empty_history(page))
+                page.goto(settings.youtube_home_url, wait_until="domcontentloaded")
         except YouTubeSessionError as exc:
             return HistorySnapshot(
                 history_items=[],

@@ -1,7 +1,9 @@
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
 from hermes_youtube_curator.cli.refresh_history import run_refresh_history
+import hermes_youtube_curator.youtube.history_collector as history_collector_module
 from hermes_youtube_curator.youtube.history_collector import (
     HistoryCollector,
     _normalize_recency_bucket,
@@ -65,4 +67,48 @@ def test_extract_visible_history_uses_section_renderers():
             "watched_at_hint": "May 18",
             "recency_bucket": "older",
         },
+    ]
+
+
+def test_collect_returns_tab_to_home_after_history_capture(monkeypatch):
+    collector = HistoryCollector()
+    settings = history_collector_module.Settings(
+        state_dir=Path("."),
+        artifact_dir=Path("./artifacts"),
+        sqlite_path=Path("./curator.db"),
+        home_fixture=None,
+        history_fixture=None,
+        enrichment_fixture=None,
+        telegram_outbox=None,
+        scheduler="test",
+        max_enrichment=1,
+        telegram_fail_delivery=False,
+        youtube_home_url="https://www.youtube.com/",
+        youtube_history_url="https://www.youtube.com/feed/history",
+        youtube_cdp_url="http://127.0.0.1:9222",
+    )
+
+    class _FakePage:
+        def __init__(self):
+            self.goto_calls = []
+
+        def goto(self, url: str, wait_until: str):
+            self.goto_calls.append((url, wait_until))
+
+    page = _FakePage()
+
+    @contextmanager
+    def fake_open_youtube_page(_settings):
+        yield page
+
+    monkeypatch.setattr(history_collector_module, "open_youtube_page", fake_open_youtube_page)
+    monkeypatch.setattr(history_collector_module, "ensure_signed_in", lambda _page: "valid")
+    monkeypatch.setattr(collector, "_capture_history", lambda _page, _settings: [])
+    monkeypatch.setattr(collector, "_diagnose_empty_history", lambda _page: "empty")
+
+    collector.collect(settings)
+
+    assert page.goto_calls == [
+        ("https://www.youtube.com/feed/history", "domcontentloaded"),
+        ("https://www.youtube.com/", "domcontentloaded"),
     ]

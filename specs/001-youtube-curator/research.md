@@ -101,29 +101,31 @@
 - Current vLLM documentation or source for deployment/runtime requirements.
 - Current model packaging/runtime details for the chosen Qwen variant.
 
-## Decision 7: Store durable state in SQLite and raw artifacts in JSON snapshots
+## Decision 7: Store durable operational state in Hermes-compatible wiki raw/index files
 
-**Decision**: Use SQLite for normalized durable state and JSON files for raw run snapshots and generated reports.
+**Decision**: Use a file-based wiki raw/index layer as the current authoritative operational store. The store lives under `HYC_WIKI_PATH` and follows the Hermes `research-llm-wiki` shape: `SCHEMA.md`, `index.md`, `log.md`, `raw/`, `entities/`, `concepts/`, `comparisons/`, and `queries/`. Project-specific deterministic files live under `raw/curator/`: `videos.json`, `recommendation-events.jsonl`, `watch-history-events.jsonl`, and `runs/*.json`.
 
-**Rationale**: The curator is single-user and local. SQLite is sufficient for histories, preferences, and cross-run linking, while raw JSON snapshots preserve the original extracted evidence for debugging, replay, and agent re-analysis. This also creates a strong local-substitutable seam for testing the persistence boundary.
+**Rationale**: The curator is single-user and local. A small JSON/JSONL index is enough for the current deterministic queries: what videos exist, when videos were recommended, and what appeared in watch history. Keeping these files inside the wiki raw layer also makes the same evidence available to Hermes for later synthesis without introducing a second persistence root. SQLite remains available in the current code for existing run/digest/delivery scaffolding, but it is no longer the chosen source of truth for video, recommendation, or history persistence.
 
 **Alternatives considered**:
-- JSON only: too awkward for longitudinal queries and deduplication.
+- SQLite as authoritative event/index store: robust, but likely premature while the app only needs a few append-only indexes and a canonical video map.
 - Postgres: unnecessary operational overhead for a personal tool.
+- Loose artifact JSON only: too weak because deterministic code still needs stable indexes for videos, recommendations, and watch history.
 
 **Source verification required before implementation**:
-- Current SQLite library usage guidance for the selected Python client and concurrency expectations in this project shape.
+- Current Hermes `research-llm-wiki` guidance for wiki layout, raw source handling, schema, index, and log conventions.
 
-## Decision 7A: Keep SQLite authoritative and defer LLM Wiki/Hermes memory to a derived layer
+## Decision 7A: Use synthesized wiki pages and Hermes memory above the raw/index layer
 
-**Decision**: Keep SQLite plus JSON artifacts as the only authoritative persistence layer for the live pipeline now. Defer any Karpathy-style LLM Wiki or Hermes-managed long-term memory layer to a later, explicitly approved adjunct derived from stored artifacts rather than replacing them.
+**Decision**: Use `raw/curator/` files for facts and events, use wiki pages for durable synthesized taste knowledge, and use Hermes memory only as a compact active summary once the curation path exists.
 
 **Comparison**:
-- **SQLite event/artifact index**: auditable, deterministic, easy to query across runs, easy to back up locally, and already aligned with the implemented `persistence/` seam.
-- **LLM Wiki / Hermes memory layer**: stronger for agent-readable taste summaries and cross-run narrative context, but less transparent as a source of truth and higher-risk before the review/approval loop exists.
-- **Hybrid approach**: still attractive later, but only after the base curator proves its evidence flow and after memory proposals plus approval states are implemented.
+- **Wiki raw/index files**: deterministic, inspectable, easy to back up, and directly compatible with the Hermes wiki skill.
+- **Synthesized wiki pages**: good for channel affinities, recurring topics, avoided formats, and long-term taste maps.
+- **Hermes memory**: good for short active preference summaries, but too opaque to serve as the full durable knowledge base.
+- **SQLite**: still a possible later optimization if JSON/JSONL file scans become painful or constraints/migrations become valuable.
 
-**Rationale**: The current highest-risk work is getting the live collection and Hermes-driven curation loop reliable. SQLite and JSON snapshots preserve raw evidence and structured outputs with minimal operational complexity. An LLM Wiki derived from those artifacts remains a good future enhancement for read-optimized taste memory, but using it as the primary system of record now would add an opaque second persistence model before the User Story 3 guardrails exist.
+**Rationale**: This keeps the current implementation simple while preserving the Karpathy/Hermes split: raw sources remain immutable or append-only, the wiki compounds knowledge from those sources, and active memory stays small.
 
 ## Decision 8: Treat recommendation feed and recent watch history as separate but linked input streams
 
@@ -153,7 +155,7 @@
 
 **Dependency-shape guidance**:
 - In-process coordination stays inside the owning deep module.
-- SQLite plus local artifact storage is treated as a local-substitutable seam and tested against local fixtures rather than mocks.
+- Wiki raw/index files plus local artifact storage are treated as a local-substitutable seam and tested against local fixtures rather than mocks.
 - Browser automation, YouTube APIs/transcripts, Hermes/vLLM invocation, and Telegram delivery are treated as real external or remote seams with production and test adapters.
 - Ports are introduced only when at least two adapters are justified, typically production plus test.
 
