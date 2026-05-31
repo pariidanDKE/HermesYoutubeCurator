@@ -25,16 +25,10 @@ class Settings:
     max_enrichment: int
     telegram_fail_delivery: bool
     youtube_user_data_dir: Path | None = None
-    youtube_storage_state: Path | None = None
-    youtube_browser_executable: Path | None = None
     youtube_cdp_url: str | None = None
-    youtube_headless: bool = True
-    youtube_allow_manual_login: bool = False
-    youtube_manual_login_timeout_seconds: int = 300
     youtube_home_scroll_count: int = 3
     youtube_scroll_pause_seconds: float = 1.5
     youtube_capture_timeout_seconds: int = 30
-    youtube_debug_hold_seconds: int = 0
     youtube_home_url: str = "https://www.youtube.com/"
     youtube_history_url: str = "https://www.youtube.com/feed/history"
 
@@ -57,14 +51,7 @@ class Settings:
             max_enrichment=int(os.getenv("HYC_MAX_ENRICHMENT", "3")),
             telegram_fail_delivery=_bool_env("HYC_TELEGRAM_FAIL_DELIVERY"),
             youtube_user_data_dir=_optional_path("HYC_YOUTUBE_USER_DATA_DIR"),
-            youtube_storage_state=_optional_path("HYC_YOUTUBE_STORAGE_STATE"),
-            youtube_browser_executable=_optional_path("HYC_YOUTUBE_BROWSER_EXECUTABLE"),
             youtube_cdp_url=os.getenv("HYC_YOUTUBE_CDP_URL"),
-            youtube_headless=_bool_env("HYC_YOUTUBE_HEADLESS", True),
-            youtube_allow_manual_login=_bool_env("HYC_YOUTUBE_ALLOW_MANUAL_LOGIN"),
-            youtube_manual_login_timeout_seconds=int(
-                os.getenv("HYC_YOUTUBE_MANUAL_LOGIN_TIMEOUT_SECONDS", "300")
-            ),
             youtube_home_scroll_count=int(os.getenv("HYC_YOUTUBE_HOME_SCROLL_COUNT", "3")),
             youtube_scroll_pause_seconds=float(
                 os.getenv("HYC_YOUTUBE_SCROLL_PAUSE_SECONDS", "1.5")
@@ -72,7 +59,6 @@ class Settings:
             youtube_capture_timeout_seconds=int(
                 os.getenv("HYC_YOUTUBE_CAPTURE_TIMEOUT_SECONDS", "30")
             ),
-            youtube_debug_hold_seconds=int(os.getenv("HYC_YOUTUBE_DEBUG_HOLD_SECONDS", "0")),
         )
 
 

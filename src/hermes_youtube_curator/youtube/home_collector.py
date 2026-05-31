@@ -10,7 +10,6 @@ from hermes_youtube_curator.youtube.browser import (
     YouTubeSessionError,
     ensure_signed_in,
     open_youtube_page,
-    persist_storage_state,
 )
 
 if TYPE_CHECKING:
@@ -23,12 +22,8 @@ class HomeCollector:
     def collect(self, settings: Settings) -> RecommendationSnapshot:
         warnings: list[str] = []
         try:
-            with open_youtube_page(settings, url=settings.youtube_home_url) as page:
-                session_state, session_warnings = ensure_signed_in(page, settings)
-                warnings.extend(session_warnings)
-                if not page.url.startswith(settings.youtube_home_url):
-                    page.goto(settings.youtube_home_url, wait_until="domcontentloaded")
-                persist_storage_state(page, settings)
+            with open_youtube_page(settings) as page:
+                session_state = ensure_signed_in(page)
                 recommendations = self._capture_homepage(page, settings)
                 if not recommendations:
                     warnings.append(self._diagnose_empty_homepage(page))
@@ -105,8 +100,12 @@ class HomeCollector:
                   link.href.includes('/watch') || link.href.includes('/shorts/')
                 );
                 const invalidTitle = /^(watch|mix|\\d{1,2}:\\d{2}(?::\\d{2})?)$/i;
+                const linkText = (link) =>
+                  (link.getAttribute('title') || link.getAttribute('aria-label') || link.innerText || '')
+                    .replace(/\\s+/g, ' ')
+                    .trim();
                 const titleLink = videoLinks.find((link) => {
-                  const text = (link.getAttribute('title') || link.innerText || '').trim();
+                  const text = linkText(link);
                   return text && !invalidTitle.test(text);
                 });
                 const fallbackVideoLink = videoLinks[0] || null;
@@ -115,7 +114,10 @@ class HomeCollector:
                 );
                 const imageNode = card.querySelector('img');
                 const metadataLine = card.querySelector('#metadata-line');
-                const title = titleLink?.getAttribute('title') || titleLink?.innerText?.trim() || null;
+                const titleSource = titleLink ? linkText(titleLink) : null;
+                const title = titleSource
+                  ? titleSource.replace(/\\s+\\d+\\s+(seconds?|minutes?|hours?).*$/i, '').trim()
+                  : null;
                 const text = (card.innerText || '').replace(/\\s+/g, ' ').trim();
                 const ariaLabels = Array.from(card.querySelectorAll('[aria-label]'))
                   .map((node) => node.getAttribute('aria-label') || '')

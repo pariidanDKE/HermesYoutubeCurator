@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
-from shutil import which
 
 import pytest
 
@@ -26,16 +26,10 @@ def live_home_settings(tmp_path: Path) -> Settings:
         max_enrichment=2,
         telegram_fail_delivery=False,
         youtube_user_data_dir=state_dir / "chrome-profile",
-        youtube_storage_state=None,
-        youtube_browser_executable=_chrome_executable_path(),
         youtube_cdp_url="http://127.0.0.1:9222",
-        youtube_headless=False,
-        youtube_allow_manual_login=True,
-        youtube_manual_login_timeout_seconds=30,
         youtube_home_scroll_count=2,
         youtube_scroll_pause_seconds=0.0,
         youtube_capture_timeout_seconds=10,
-        youtube_debug_hold_seconds=0,
     )
 
 
@@ -52,8 +46,8 @@ def test_collect_live_homepage_records_structure(
     artifact_path.write_text(
         json.dumps(
             {
-                "browser_executable": str(live_home_settings.youtube_browser_executable),
                 "user_data_dir": str(live_home_settings.youtube_user_data_dir),
+                "cdp_url": live_home_settings.youtube_cdp_url,
                 "collection_status": snapshot.collection_status,
                 "session_state": snapshot.session_state,
                 "warnings": snapshot.warnings,
@@ -104,17 +98,14 @@ def test_collect_live_homepage_records_structure(
     assert snapshot.collection_status == "success", snapshot.warnings
     assert snapshot.recommendation_count > 0
     assert all(item.title and item.channel_name and item.url for item in snapshot.recommendations)
-
-
-def _chrome_executable_path() -> Path | None:
-    executable = which("google-chrome") or which("google-chrome-stable")
-    if not executable:
-        pytest.fail("Google Chrome is required for the live YouTube collector integration test.")
-    return Path(executable)
+    assert not any(
+        item.title.lower() in {"watch", "mix"} or re.fullmatch(r"\d{1,2}:\d{2}(?::\d{2})?", item.title)
+        for item in snapshot.recommendations[:10]
+    )
 
 
 def _sample_homepage_cards(settings: Settings) -> list[dict[str, object]]:
-    with open_youtube_page(settings, url=settings.youtube_home_url) as page:
+    with open_youtube_page(settings) as page:
         page.wait_for_selector(
             "ytd-rich-item-renderer, ytd-rich-grid-media, ytd-video-renderer",
             timeout=settings.youtube_capture_timeout_seconds * 1000,
