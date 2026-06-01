@@ -88,7 +88,7 @@ As the owner of the curator, I want the system to detect recurring interests ove
 - **FR-019**: The system MUST record when a run fails or encounters partial evidence so the user can review what happened.
 - **FR-020**: The system MUST use a deterministic configured scheduler for recurring runs rather than asking the agent to decide when to wake up.
 - **FR-021**: The system MUST deliver completed digests through a Hermes Telegram messaging channel in v1.
-- **FR-022**: The system MUST record delivery success or failure for each produced digest.
+- **FR-022**: The system MUST surface delivery success or failure through Hermes cron/operator output for each produced digest; the Python package MUST NOT own Telegram delivery state.
 - **FR-023**: The system SHOULD leave room for a future WhatsApp delivery target as a stretch goal without making it part of the v1 delivery contract.
 
 ### Key Entities *(include if feature involves data)*
@@ -100,8 +100,7 @@ As the owner of the curator, I want the system to detect recurring interests ove
 - **Enrichment Selection**: A recorded decision about which candidate videos should receive deeper enrichment, which should be deferred, and why.
 - **Video Content Detail**: Supplemental source material for a recommended video, such as its description or transcript, used to produce richer summaries when available.
 - **Curation Digest**: A structured user-facing output that ranks recommendations, groups themes, and suggests watch, save, or skip actions.
-- **Delivery Target**: A configured Hermes messaging destination such as a Telegram chat used to receive digests.
-- **Delivery Record**: A record of whether a generated digest was successfully delivered to its target channel and any failure reason.
+- **Hermes Delivery Outcome**: The Hermes-owned result of sending a digest to the configured Telegram destination, surfaced through cron/operator output rather than Python persistence.
 - **Idea Proposal**: A generated creative or research suggestion derived from curated recommendations, such as a video idea, script angle, or follow-up question.
 - **Preference Memory Proposal**: A suggested update to the user's long-term interests or preferences that remains pending until the user approves it.
 - **Theme History**: A longitudinal record of recurring topics, changing interests, and recommendation patterns observed across multiple runs.

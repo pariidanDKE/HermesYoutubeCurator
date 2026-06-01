@@ -27,27 +27,24 @@ the source of truth for the next implementation pass.
 - `src/hermes_youtube_curator/youtube/history_collector.py` now has a real
   Playwright/CDP collection path that reads YouTube history sections from the
   already-open, logged-in Chrome session.
-- `src/hermes_youtube_curator/youtube/enrichment.py` is still fixture-only.
-- `src/hermes_youtube_curator/curation/selection_service.py` is still a local
-  deterministic heuristic, not Hermes-driven selection.
-- `src/hermes_youtube_curator/curation/curator_service.py` is still a local
-  heuristic digest renderer, not a Hermes agent invocation.
-- `src/hermes_youtube_curator/delivery/telegram.py` is still a local outbox
-  transport, not Hermes Telegram delivery.
-- CLI entrypoints exist, but several currently wrap the skeleton services
-  above; do not treat those flows as production-complete until the underlying
-  service task is complete.
+- The fixture-only `youtube/enrichment.py` and the heuristic
+  `curation/selection_service.py` were removed entirely (along with the
+  `select-enrichment`/`enrich-videos` commands and the `curation/` package).
+  Enrichment selection and enrichment are now owned by Hermes at curation time,
+  using the bundled `youtube-content` skill for transcripts.
+- Python CLI entrypoints are limited to deterministic evidence generation
+  (`refresh-home`, `refresh-history`). Selection, enrichment, curation, and
+  Telegram delivery are owned by Hermes cron/manual operation.
 
-### Next Priorities
+### Current Baseline And Next Priorities
 
-- **P0**: Use the Hermes-compatible wiki raw/index layer as the current
+- **Baseline**: Use the Hermes-compatible wiki raw/index layer as the current
   persistence path for videos, recommendation events, watch-history events, and
-  run artifacts. SQLite remains only for existing run/digest/delivery scaffolding
-  until those flows are migrated or removed.
-- **P1**: Replace CLI skeleton flows with commands that invoke the actual
-  Hermes agent path for selection and curation.
-- **P1**: Replace local Telegram outbox delivery with Hermes-agent Telegram
-  message generation and delivery recording.
+  run artifacts. SQLite and local Telegram delivery have been removed from the
+  Python package.
+- **P1**: Configure Hermes cron/manual operation to invoke the deterministic
+  Python collection commands, read the wiki raw/index evidence, and perform
+  agent-owned selection and curation.
 - **P1**: Run and harden the full end-to-end integration path:
   launch logged-in browser, collect home/history, persist evidence, invoke
   Hermes, send Telegram, and record structured results.
@@ -60,7 +57,7 @@ the source of truth for the next implementation pass.
 
 **Purpose**: Create the Python project skeleton and capture the verified integration references needed before implementation.
 
-- [X] T001 Create the application package and test directory skeleton in `src/hermes_youtube_curator/__init__.py`, `src/hermes_youtube_curator/cli/__init__.py`, `src/hermes_youtube_curator/pipeline/__init__.py`, `src/hermes_youtube_curator/youtube/__init__.py`, `src/hermes_youtube_curator/curation/__init__.py`, `src/hermes_youtube_curator/persistence/__init__.py`, `src/hermes_youtube_curator/delivery/__init__.py`, `tests/contract/__init__.py`, and `tests/integration/__init__.py`
+- [X] T001 Create the application package and test directory skeleton in `src/hermes_youtube_curator/__init__.py`, `src/hermes_youtube_curator/cli/__init__.py`, `src/hermes_youtube_curator/pipeline/__init__.py`, `src/hermes_youtube_curator/youtube/__init__.py`, `src/hermes_youtube_curator/curation/__init__.py`, `src/hermes_youtube_curator/persistence/__init__.py`, `tests/contract/__init__.py`, and `tests/integration/__init__.py`
 - [X] T002 Initialize the Python project metadata and runtime dependencies in `pyproject.toml`
 - [X] T003 [P] Add environment and path configuration scaffolding in `src/hermes_youtube_curator/config/settings.py` and `.env.example`
 - [X] T004 [P] Configure linting and pytest defaults in `pyproject.toml` and `tests/conftest.py`
@@ -76,16 +73,16 @@ the source of truth for the next implementation pass.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [X] T006 Define shared Pydantic-style domain models for runs, snapshots, selections, digests, and delivery records in `src/hermes_youtube_curator/models.py`
+- [X] T006 Define shared Pydantic-style domain models for runs, snapshots, selections, and optional Hermes digest validation in `src/hermes_youtube_curator/models.py`
 - [X] T007 [P] Implement artifact serialization and JSON storage helpers in `src/hermes_youtube_curator/persistence/artifacts.py`
-- [X] T008 [P] Implement SQLite schema initialization and repository scaffolding for runs, videos, digests, and deliveries in `src/hermes_youtube_curator/persistence/sqlite_store.py`
+- [X] T008 [P] Removed SQLite schema/repository scaffolding after choosing the wiki raw/index layer as the only Python-owned persistence path
 - [X] T008A [P0] Implement Hermes-compatible wiki raw/index persistence for videos, recommendation events, watch-history events, and run artifacts in `src/hermes_youtube_curator/persistence/wiki_store.py`
 - [X] T009 [P] Implement structured logging and machine-readable result helpers for CLI commands in `src/hermes_youtube_curator/cli/results.py`
 - [X] T010 [P] Implement the deterministic orchestration context and dependency wiring in `src/hermes_youtube_curator/pipeline/context.py`
-- [X] T011 [P] Create CLI entrypoint wrappers for `morning-run`, `refresh-home`, `refresh-history`, `select-enrichment`, `enrich-videos`, and `run-curator` in `src/hermes_youtube_curator/cli/main.py`
+- [X] T011 [P] Create CLI entrypoints for `refresh-home`, `refresh-history`, `select-enrichment`, and `enrich-videos` in `src/hermes_youtube_curator/cli/main.py`
 - [X] T012 Implement command exit-code gates and result validation shared by all entrypoints in `src/hermes_youtube_curator/cli/guards.py`
 - [X] T013 [P] Add contract tests for CLI machine-readable outputs defined in `specs/001-youtube-curator/contracts/curator-cli.md` in `tests/contract/test_cli_contracts.py`
-- [X] T014 [P] Add artifact contract tests for snapshot, selection, digest, and delivery records from `specs/001-youtube-curator/contracts/snapshot-artifacts.md` in `tests/contract/test_artifact_contracts.py`
+- [X] T014 [P] Add artifact contract tests for snapshot, selection, and enrichment records from `specs/001-youtube-curator/contracts/snapshot-artifacts.md` in `tests/contract/test_artifact_contracts.py`
 - [X] T015 Add integration tests for shared CLI guards and run-summary failure handling in `tests/integration/test_cli_guards.py`
 
 **Checkpoint**: Foundation ready; deterministic commands and shared artifacts exist behind stable seams.
@@ -96,14 +93,14 @@ the source of truth for the next implementation pass.
 
 **Goal**: Collect homepage and recent-history evidence, generate a Hermes-backed digest, and deterministically deliver it to Telegram.
 
-**Independent Test**: Run the homepage/history collection, curator, and delivery entrypoints against fixture data or a configured environment and confirm a digest is produced with a recorded Telegram delivery outcome.
+**Independent Test**: Run homepage/history collection against fixture data or a configured environment, then validate the Hermes cron/manual flow produces and delivers the digest.
 
 ### Tests for User Story 1
 
 - [X] T016 [P] [US1] Add integration tests for homepage collection and snapshot persistence in `tests/integration/test_refresh_home.py`
 - [X] T017 [P] [US1] Add integration tests for history collection and recency signal persistence in `tests/integration/test_refresh_history.py`
-- [X] T018 [P] [US1] Add integration tests for the full `morning-run` happy path and partial-evidence path in `tests/integration/test_morning_run.py`
-- [X] T019 [P] [US1] Add contract tests for Telegram delivery records and transport outcomes in `tests/contract/test_delivery_contracts.py`
+- [X] T018 [P] [US1] Removed the local full-run integration path after Hermes cron became the owner of curation and delivery
+- [X] T019 [P] [US1] Removed local Telegram delivery contract tests after Hermes cron became the delivery path
 
 ### Implementation for User Story 1
 
@@ -111,10 +108,10 @@ the source of truth for the next implementation pass.
 - [X] T021 [P0] [US1] Implement recent watch-history collection with Playwright in `src/hermes_youtube_curator/youtube/history_collector.py` using the logged-in Chrome/CDP attach path
 - [X] T023 [US1] Implement the `refresh-home` command flow and machine-readable output in `src/hermes_youtube_curator/cli/refresh_home.py`
 - [X] T024 [P0] [US1] Update the `refresh-history` command flow in `src/hermes_youtube_curator/cli/refresh_history.py` to use the real history collector instead of fixture input
-- [ ] T025 [P1] [US1] Implement Hermes curator invocation and digest synthesis using local artifacts in `src/hermes_youtube_curator/curation/curator_service.py`
-- [ ] T026 [P1] [US1] Implement deterministic Telegram delivery through Hermes in `src/hermes_youtube_curator/delivery/telegram.py`
-- [ ] T027 [P1] [US1] Update the `run-curator` command flow in `src/hermes_youtube_curator/cli/run_curator.py` to invoke the actual Hermes curator path instead of the local heuristic renderer
-- [ ] T028 [P1] [US1] Update the end-to-end `morning-run` orchestration in `src/hermes_youtube_curator/cli/morning_run.py` so it uses live home/history collection, the decided persistence layer, Hermes curation, and Hermes Telegram delivery
+- [X] T025 [P1] [US1] Removed the optional programmatic Hermes curator harness; Hermes cron/manual operation is the only digest path
+- [ ] T026 [P1] [US1] Validate deterministic Telegram delivery through Hermes cron configuration and operator docs
+- [ ] T027 [P1] [US1] Document and validate the Hermes cron/manual curator flow that runs deterministic Python collection commands, reads wiki raw/index evidence, and performs agent-owned curation
+- [ ] T028 [P1] [US1] Validate the end-to-end Hermes cron job using `scripts/youtube_curator_refresh_for_hermes.sh`, wiki raw/index evidence, Hermes curation, and Hermes Telegram delivery
 - [X] T029 [US1] Add operator documentation for the MVP command sequence and required env vars in `specs/001-youtube-curator/quickstart.md`
 
 **Checkpoint**: User Story 1 is functional; the system can collect evidence, generate a digest, and record deterministic Telegram delivery.
@@ -135,14 +132,14 @@ the source of truth for the next implementation pass.
 
 ### Implementation for User Story 2
 
-- [X] T033 [P] [US2] Implement canonical video linking and enrichment selection repositories in `src/hermes_youtube_curator/persistence/video_store.py`
+- [X] T033 [P] [US2] Implement canonical video linking through the wiki raw/index persistence layer instead of a separate SQLite-backed video store
 - [ ] T034 [P2] [US2] Implement deterministic metadata enrichment adapters and preferred bundled-skill transcript integration in `src/hermes_youtube_curator/youtube/enrichment.py`
 - [ ] T035 [P1] [US2] Implement Hermes-driven enrichment selection in `src/hermes_youtube_curator/curation/selection_service.py`
 - [X] T036 [US2] Implement the `select-enrichment` command flow in `src/hermes_youtube_curator/cli/select_enrichment.py`
 - [X] T037 [US2] Implement the `enrich-videos` command flow in `src/hermes_youtube_curator/cli/enrich_videos.py`
 - [X] T038 [US2] Integrate bundled `youtube-content` usage into `skills/youtube-curator/SKILL.md`, adding supplemental local skill steps only if required
-- [X] T039 [US2] Add Hermes curator skill setup commands and transcript dependency guidance in `scripts/setup_hermes_curator.sh`
-- [ ] T040 [P2] [US2] Update curator synthesis to consume enriched descriptions and transcripts in `src/hermes_youtube_curator/curation/curator_service.py` after real enrichment exists
+- [X] T039 [US2] Add Hermes curator skill setup commands and transcript dependency guidance in `specs/001-youtube-curator/quickstart.md`
+- [ ] T040 [P2] [US2] Update the Hermes curator skill/prompt flow to consume enriched descriptions and transcripts after real enrichment exists
 - [ ] T041 [US2] Document transcript helper usage, Hermes skill setup flow, and model-evaluation workflow in `specs/001-youtube-curator/quickstart.md`
 
 **Checkpoint**: User Story 2 is functional; Hermes can choose a bounded set of videos, use transcript and metadata helpers, and produce richer summaries.
@@ -162,10 +159,10 @@ the source of truth for the next implementation pass.
 
 ### Implementation for User Story 3
 
-- [ ] T044 [P2] [US3] Decide and implement the persistence model for theme history and memory proposals in `src/hermes_youtube_curator/persistence/memory_store.py`, explicitly choosing the SQLite-only, LLM Wiki/Hermes-memory, or hybrid approach
-- [ ] T045 [P2] [US3] Implement cross-run theme analysis and memory proposal synthesis in `src/hermes_youtube_curator/curation/memory_service.py`
-- [ ] T046 [US3] Integrate approval-gated memory proposals into the curator output pipeline in `src/hermes_youtube_curator/curation/curator_service.py`
-- [ ] T047 [US3] Add Hermes setup commands for curator skill registration and bounded self-learning loop configuration in `scripts/setup_hermes_curator.sh`
+- [ ] T044 [P2] [US3] Implement theme-history and memory-proposal persistence as synthesized wiki pages, using Hermes memory only as a compact active summary
+- [ ] T045 [P2] [US3] Implement cross-run theme analysis and memory proposal synthesis in the Hermes wiki/skill flow
+- [ ] T046 [US3] Integrate approval-gated memory proposals into the Hermes curator output flow
+- [ ] T047 [US3] Add Hermes setup commands for curator skill registration and bounded self-learning loop configuration in `specs/001-youtube-curator/quickstart.md`
 - [ ] T048 [US3] Document the review-and-approval loop for memory proposals in `specs/001-youtube-curator/quickstart.md`
 
 **Checkpoint**: User Story 3 is functional; the curator can learn across runs, but all durable preference changes remain explicit proposals.
@@ -178,11 +175,11 @@ the source of truth for the next implementation pass.
 
 - [ ] T049 [P] Add fixture artifacts covering partial collection, repeated recommendations, and delivery failures in `tests/fixtures/`
 - [X] T050 Add end-to-end CLI smoke checks for local operator use through `python3 -m hermes_youtube_curator.cli.main`
-- [ ] T051 [P] Add delivery retry, idempotency, and failure-recording hardening in `src/hermes_youtube_curator/delivery/telegram.py`
+- [ ] T051 [P] Add Hermes cron delivery retry, idempotency, and failure-recording operator guidance
 - [ ] T052 [P] Add schema migration notes and backup/restore guidance for local state in `specs/001-youtube-curator/quickstart.md`
 - [ ] T053 Run quickstart validation and update operator-facing setup instructions in `specs/001-youtube-curator/quickstart.md`
 - [ ] T055 Add deterministic scheduler setup examples and operator guidance for recurring runs, covering OS cron/systemd and the chosen Hermes scheduling path if adopted, in `ops/cron/youtube-curator.cron`, `ops/systemd/hermes-youtube-curator.service`, `ops/systemd/hermes-youtube-curator.timer`, and `specs/001-youtube-curator/quickstart.md`
-- [ ] T057 Add Hermes tool-allowlist setup and guardrail validation for normal curator runs in `scripts/setup_hermes_curator.sh`, `specs/001-youtube-curator/quickstart.md`, and `tests/contract/test_guardrails.py`
+- [ ] T057 Add Hermes tool-allowlist setup and guardrail validation for normal curator runs in `specs/001-youtube-curator/quickstart.md` and `tests/contract/test_guardrails.py`
 - [X] T058 [P0] Add a short persistence decision record to `specs/001-youtube-curator/research.md` comparing SQLite event/artifact indexing with a Karpathy-style LLM Wiki / Hermes memory layer for agent-readable long-term knowledge
 
 ---
@@ -247,7 +244,7 @@ Task: "Add contract tests for transcript-helper and enrichment artifact behavior
 # Launch US2 enrichment components together:
 Task: "Implement deterministic metadata and transcript enrichment adapters in src/hermes_youtube_curator/youtube/enrichment.py"
 Task: "Integrate bundled youtube-content usage and any repo-local transcript helper invocation into skills/youtube-curator/SKILL.md"
-Task: "Implement canonical video linking and enrichment selection repositories in src/hermes_youtube_curator/persistence/video_store.py"
+Task: "Implement canonical video linking through the wiki raw/index persistence layer"
 ```
 
 ---
@@ -259,12 +256,12 @@ Task: "Implement canonical video linking and enrichment selection repositories i
 1. Complete Phase 1: Setup.
 2. Complete Phase 2: Foundational.
 3. Complete Phase 3: User Story 1.
-4. Validate the command gates, artifact outputs, and deterministic Telegram delivery.
+4. Validate the command gates, artifact outputs, and Hermes-owned Telegram delivery.
 5. Use that result to judge whether the chosen local model and Hermes flow are good enough before investing further in deeper persistence or learning behavior.
 
 ### Incremental Delivery
 
-1. Ship the deterministic collector + curator + Telegram MVP from US1.
+1. Ship the deterministic collector plus Hermes curator and Telegram MVP from US1.
 2. Add skill-guided selection and enrichment from US2 once the base model path is proven, preferring the bundled `youtube-content` skill for transcripts.
 3. Add longitudinal memory proposals and the constrained self-learning loop from US3 after the base curation quality is acceptable.
 4. Harden retries, idempotency, and operator workflow in Phase 6.

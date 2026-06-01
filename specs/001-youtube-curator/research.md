@@ -11,9 +11,10 @@
 - Public API only: insufficient for personalized homepage and watch-history capture.
 - Fully agent-driven browsing: rejected because it weakens guardrails and makes extraction less deterministic.
 
-**Source verification required before implementation**:
-- Current Playwright Python documentation for browser/session handling.
-- Current upstream/source behavior for the selected signed-in session strategy.
+**Verification status**:
+- Implemented session strategy uses Playwright's Chromium CDP attach path against Chrome launched by `scripts/launch_youtube_browser.py`.
+- Live home/history integration checks verified the signed-in read-only collection path against an already-running local Chrome debug session.
+- Re-check current Playwright Python docs before changing browser/session strategy.
 
 ## Decision 2: Use a deterministic scheduler for recurring runs
 
@@ -26,6 +27,10 @@
 - OS-level cron or systemd as the default: acceptable fallback, but less aligned with the desired simplicity when Hermes cron is sufficient.
 - Manual-only operation: too fragile for a recurring curator.
 
+**Verification status**:
+- Local `hermes cron create --help` verified the current scheduler syntax: `hermes cron create [schedule] [prompt]`, with `--script`, `--no-agent`, `--workdir`, `--deliver`, and `--profile`.
+- Operator docs now use the verified `hermes cron create ... --script ...` form rather than the obsolete pass-through command shape.
+
 ## Decision 3: Let Hermes select which videos deserve deeper enrichment
 
 **Decision**: After deterministic collection, use Hermes to choose which video IDs deserve deeper enrichment based on current recommendations, recent watch history, and persistent preference memory.
@@ -36,7 +41,8 @@
 - Enrich every collected video equally: simpler, but wastes effort on low-value items.
 - Hard-coded enrichment heuristics only: easier to implement, but less adaptive to taste, mood, and recent viewing patterns.
 
-**Source verification required before implementation**:
+**Verification status**:
+- Pending before T035/T025 implementation.
 - Current Hermes Agent documentation or upstream source for skills, memory, and invocation behavior.
 - Current bundled `youtube-content` skill documentation and helper-script behavior.
 
@@ -51,7 +57,8 @@
 - Manual transcript scraping from pages: more brittle than a dedicated transcript client or the bundled Hermes skill.
 - Transcript-only enrichment: insufficient because descriptions, channel metadata, and publication context remain useful even when no transcript exists.
 
-**Source verification required before implementation**:
+**Verification status**:
+- Pending before T034 implementation.
 - Current YouTube Data API v3 documentation for the chosen endpoints and quotas.
 - Current bundled `youtube-content` skill documentation and helper-script behavior.
 - Current `youtube-transcript-api` documentation or installed source for transcript availability and failure behavior, if fallback integration is needed.
@@ -68,7 +75,8 @@
 - Use Hermes only for report formatting: too shallow to be a credible challenge submission.
 - Multiple narrowly split curator skills: rejected as unnecessary complexity before a single skill proves insufficient.
 
-**Source verification required before implementation**:
+**Verification status**:
+- Pending before T025/T026/T027 implementation.
 - Current Hermes Agent documentation or upstream source for skills, memory, and invocation behavior.
 
 ## Decision 5A: Treat Hermes self-improvement as a bounded capability to evaluate, not a baseline dependency
@@ -97,23 +105,24 @@
 - Smaller local models: potentially cheaper but may underperform on nuanced curation and summarization.
 - Hosted APIs as a baseline branch: rejected because they add a second execution path and weaken the local-first design.
 
-**Source verification required before implementation**:
-- Current vLLM documentation or source for deployment/runtime requirements.
-- Current model packaging/runtime details for the chosen Qwen variant.
+**Verification status**:
+- Local Hermes configuration was inspected with `hermes config show`; it points at the local OpenAI-compatible Qwen server.
+- Local vLLM/model runtime notes are recorded below in "Local inference notes"; re-check current vLLM docs before changing serving flags or model packaging.
 
 ## Decision 7: Store durable operational state in Hermes-compatible wiki raw/index files
 
 **Decision**: Use a file-based wiki raw/index layer as the current authoritative operational store. The store lives under `HYC_WIKI_PATH` and follows the Hermes `research-llm-wiki` shape: `SCHEMA.md`, `index.md`, `log.md`, `raw/`, `entities/`, `concepts/`, `comparisons/`, and `queries/`. Project-specific deterministic files live under `raw/curator/`: `videos.json`, `recommendation-events.jsonl`, `watch-history-events.jsonl`, and `runs/*.json`.
 
-**Rationale**: The curator is single-user and local. A small JSON/JSONL index is enough for the current deterministic queries: what videos exist, when videos were recommended, and what appeared in watch history. Keeping these files inside the wiki raw layer also makes the same evidence available to Hermes for later synthesis without introducing a second persistence root. SQLite remains available in the current code for existing run/digest/delivery scaffolding, but it is no longer the chosen source of truth for video, recommendation, or history persistence.
+**Rationale**: The curator is single-user and local. A small JSON/JSONL index is enough for the current deterministic queries: what videos exist, when videos were recommended, and what appeared in watch history. Keeping these files inside the wiki raw layer also makes the same evidence available to Hermes for later synthesis without introducing a second persistence root. SQLite was removed from the Python package after the wiki raw/index layer became the chosen source of truth for video, recommendation, and history persistence.
 
 **Alternatives considered**:
 - SQLite as authoritative event/index store: robust, but likely premature while the app only needs a few append-only indexes and a canonical video map.
 - Postgres: unnecessary operational overhead for a personal tool.
 - Loose artifact JSON only: too weak because deterministic code still needs stable indexes for videos, recommendations, and watch history.
 
-**Source verification required before implementation**:
-- Current Hermes `research-llm-wiki` guidance for wiki layout, raw source handling, schema, index, and log conventions.
+**Verification status**:
+- Hermes `research-llm-wiki` guidance was reviewed for the wiki layout split between raw source material, schema, index, log, and synthesized pages.
+- The implemented raw/index layout is covered by `tests/unit/test_wiki_store.py`.
 
 ## Decision 7A: Use synthesized wiki pages and Hermes memory above the raw/index layer
 
@@ -149,7 +158,7 @@
 
 ## Decision 9A: Deepen around stable dependency boundaries rather than pipeline stages
 
-**Decision**: Organize the implementation around a few deep modules such as `youtube`, `curation`, `persistence`, and `delivery`, while keeping `pipeline` as a thin orchestration layer.
+**Decision**: Organize the implementation around a few deep modules such as `youtube` and `persistence`, while keeping `pipeline` as a thin orchestration layer. In the implemented path, enrichment selection, curation, and delivery moved to Hermes rather than becoming Python `curation`/`delivery` modules.
 
 **Rationale**: Collection, transcript retrieval, metadata enrichment, ranking, digest generation, and memory proposals each contain meaningful internal complexity, but that complexity clusters by dependency boundary rather than by CLI stage name. A top-level package per stage would create shallow wrappers and single-adapter seams. Deep modules let the implementation absorb that complexity behind fewer interfaces and keep tests focused on behavior.
 
@@ -186,7 +195,8 @@
 - Keep metadata enrichment in direct Python adapters where structured non-transcript fields are needed.
 - Let the dedicated curator skill own message framing and transcript-formatting guidance rather than creating a separate MCP surface.
 
-**Source verification required before implementation**:
+**Verification status**:
+- Pending before T034/T035 implementation.
 - Current bundled `youtube-content` skill documentation and helper-script behavior.
 - Current Hermes skills system documentation for SKILL.md execution patterns.
 - Current `youtube-transcript-api` documentation or installed source for transcript availability and failure behavior.
@@ -215,19 +225,19 @@
 
 **Architectural seams to preserve**:
 - **Scheduler -> Pipeline**: A deterministic scheduler triggers the run without agent wake-up logic.
-- **Pipeline -> YouTube**: Collection and enrichment happen through the `youtube` module rather than exposing browser or API details to the rest of the system.
-- **Pipeline -> Curation**: Selection, ranking, summarization, and memory proposals happen through the `curation` module rather than through separate stage packages.
-- **YouTube/Curation/Delivery -> Persistence**: Storage is handled through one local-substitutable persistence seam.
-- **Curation -> Delivery**: Hermes Telegram delivery sends the completed digest without coupling curation to platform-specific details.
+- **Pipeline -> YouTube**: Collection happens through the `youtube` module rather than exposing browser details to the rest of the system.
+- **YouTube -> Persistence**: Storage is handled through one local-substitutable persistence seam (raw JSON artifacts plus the wiki raw/index layer).
+- **Persistence -> Hermes**: Hermes reads the wiki evidence and owns selection, ranking, summarization, memory proposals, and Telegram delivery; these are not Python `curation`/`delivery` modules.
 
-**Source verification required before implementation**:
-- Current Hermes Telegram setup docs.
-- Current Hermes configuration and CLI references for messaging platforms.
-- Current Hermes WhatsApp setup docs if the stretch goal is pursued later.
+**Verification status**:
+- Local Hermes CLI/config inspection verified Telegram and WhatsApp are recognized messaging platforms.
+- Local Hermes cron help verified scheduled jobs can deliver through `--deliver telegram`.
+- Re-check current Hermes Telegram setup docs before implementing T026 delivery.
+- Re-check current Hermes WhatsApp setup docs only if the stretch goal is pursued.
 
 ## Implementation Notes: current repo path
 
-- The implemented repo path keeps one deterministic pipeline: `refresh-home` -> `refresh-history` -> `select-enrichment` -> `enrich-videos` -> `run-curator` -> Telegram delivery.
+- The implemented repo path keeps Python focused on deterministic evidence generation: `refresh-home` and `refresh-history` only. Enrichment selection and enrichment were removed from Python; Hermes cron owns selection, enrichment (via the bundled `youtube-content` skill), final curation, and Telegram delivery.
 - No MCP layer was added for enrichment or delivery. Transcript-aware guidance lives in `skills/youtube-curator/SKILL.md`, which explicitly points Hermes at the bundled `youtube-content` skill as the preferred transcript workflow.
 - No snapshot-diff skip branch was added. The curator only skips when there is not enough evidence to curate, not because the newest snapshot resembles a previous one.
 - Hermes cron is the preferred recurring scheduler in the implementation docs and setup script. OS cron and systemd examples remain operator-facing fallback infrastructure, not agent-owned wake-up logic.

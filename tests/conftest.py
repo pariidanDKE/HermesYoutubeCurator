@@ -63,32 +63,6 @@ def fixture_dir(tmp_path: Path) -> Path:
         ),
         encoding="utf-8",
     )
-    (fixture_dir / "enrichment.json").write_text(
-        json.dumps(
-            {
-                "videos": [
-                    {
-                        "video_id": "vid-1",
-                        "title": "Practical agent design",
-                        "channel_name": "Hermes Lab",
-                        "metadata_status": "available",
-                        "description_text": "A deterministic agent workflow overview.",
-                        "transcript_status": "available",
-                        "transcript_text": "Transcript text for vid-1.",
-                    },
-                    {
-                        "video_id": "vid-2",
-                        "title": "SQLite for local apps",
-                        "channel_name": "Data Craft",
-                        "metadata_status": "available",
-                        "description_text": "Patterns for durable local state.",
-                        "transcript_status": "unavailable",
-                    },
-                ]
-            }
-        ),
-        encoding="utf-8",
-    )
     return fixture_dir
 
 
@@ -98,15 +72,10 @@ def app_context(tmp_path: Path, fixture_dir: Path) -> AppContext:
     settings = Settings(
         state_dir=state_dir,
         artifact_dir=state_dir / "artifacts",
-        sqlite_path=state_dir / "curator.db",
         home_fixture=fixture_dir / "homepage.json",
         history_fixture=fixture_dir / "history.json",
-        enrichment_fixture=fixture_dir / "enrichment.json",
-        telegram_outbox=state_dir / "telegram.log",
         wiki_path=state_dir / "wiki",
         scheduler="hermes-cron",
-        max_enrichment=2,
-        telegram_fail_delivery=False,
     )
     context = AppContext.build(settings)
     context.home_collector = _FixtureHomeCollector()
