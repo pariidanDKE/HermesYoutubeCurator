@@ -1,9 +1,0 @@
-[Unit]
-Description=Run Hermes YouTube Curator each morning
-
-[Timer]
-OnCalendar=*-*-* 08:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target

@@ -1,1 +1,0 @@
-0 8 * * * cd /home/dan-parii/Documents/HermesYoutubeCurator && python3 -m hermes_youtube_curator.cli.main morning-run
