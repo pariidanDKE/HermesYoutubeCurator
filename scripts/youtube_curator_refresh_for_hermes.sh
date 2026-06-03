@@ -38,9 +38,9 @@ if ! cdp_ready; then
   exit 1
 fi
 
-python3 -m hermes_youtube_curator.cli.main refresh-home
+python3 -m hermes_youtube_curator.cli.collector refresh-home
 sleep 10
-python3 -m hermes_youtube_curator.cli.main refresh-history
+python3 -m hermes_youtube_curator.cli.collector refresh-history
 
 echo "wiki_path=$WIKI"
 echo "raw_curator_path=$RAW"

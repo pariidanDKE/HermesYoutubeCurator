@@ -34,7 +34,6 @@ These two commands are the entire Python surface: they collect evidence into the
 - Hermes cron runs scripts from `~/.hermes/scripts/`; copy `scripts/youtube_curator_refresh_for_hermes.sh` there as `youtube-curator-refresh.sh`.
 - Do not use `--no-agent` for the curator job. The script refreshes raw wiki evidence, then Hermes Agent uses that script output as context and delivers the final digest.
 - Example: `hermes cron create "0 8 * * *" --name youtube-curator --script youtube-curator-refresh.sh --skill youtube-curator --workdir /home/dan-parii/Documents/HermesYoutubeCurator --deliver telegram "After the script refreshes the YouTube curator raw wiki files, read the paths in Script Output and produce a concise Telegram digest with watch/save/skip recommendations, history influence notes, and explicit memory proposals only. Do not modify YouTube."`
-- Fallback operator examples live in `ops/cron/youtube-curator.cron` and `ops/systemd/`.
 
 ## 6. Guardrails
 

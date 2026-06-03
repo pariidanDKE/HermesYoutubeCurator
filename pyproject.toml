@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-hermes-youtube-curator = "hermes_youtube_curator.cli.main:main"
+hermes-youtube-curator = "hermes_youtube_curator.cli.collector:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

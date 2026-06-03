@@ -21,6 +21,9 @@ def main() -> int:
         f"--user-data-dir={PROFILE_DIR.resolve()}",
         "--profile-directory=Default",
         f"--remote-debugging-port={CDP_PORT}",
+        # Stop Chrome from downloading its multi-GB on-device AI model
+        # (OptGuideOnDeviceModel / Gemini Nano) into this scraping profile.
+        "--disable-features=OptimizationGuideOnDeviceModel,OptimizationHintsFetching",
         "https://www.youtube.com/",
     ]
     print(f"Using profile: {PROFILE_DIR.resolve()}")
