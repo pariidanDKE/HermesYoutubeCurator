@@ -32,6 +32,10 @@ class WikiStore:
     def watch_history_events_path(self) -> Path:
         return self.raw_curator_dir / "watch-history-events.jsonl"
 
+    @property
+    def transcripts_dir(self) -> Path:
+        return self.wiki_path / "raw" / "transcripts"
+
     def _initialize(self) -> None:
         for relative_path in [
             "raw/articles",
