@@ -1,0 +1,7 @@
+name: curator-subagent-guard
+version: 1.0.0
+description: "pre_tool_call hook that hard-restricts the youtube-curator's delegated subagents — the transcript subagent to the fetch-transcript collector command, and the wiki-enricher to writes under the wiki entities/ and concepts/ dirs. Default-deny everything else. Defense against prompt injection from untrusted YouTube transcripts."
+author: dan-parii
+kind: standalone
+provides_hooks:
+  - pre_tool_call
