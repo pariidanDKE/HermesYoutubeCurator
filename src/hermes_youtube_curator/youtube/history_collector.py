@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from time import sleep
@@ -19,6 +20,14 @@ if TYPE_CHECKING:
     from playwright.sync_api import Page
 else:
     Page = Any
+
+logger = logging.getLogger(__name__)
+
+# Selector for the per-video cards we extract. Kept in sync with the node query
+# inside _extract_visible_history so the coverage check counts the same elements.
+_ROW_SELECTOR = (
+    "yt-lockup-view-model, ytd-video-renderer, ytd-rich-item-renderer, ytd-reel-item-renderer"
+)
 
 
 class HistoryCollector:
@@ -51,6 +60,8 @@ class HistoryCollector:
                 items = self._capture_history(page, settings)
                 if not items:
                     warnings.append(self._diagnose_empty_history(page))
+                else:
+                    warnings.extend(self._coverage_warnings(page, len(items)))
                 page.goto(settings.youtube_home_url, wait_until="domcontentloaded")
         except YouTubeSessionError as exc:
             return HistorySnapshot(
@@ -178,6 +189,46 @@ class HistoryCollector:
                 }
             )
         return extracted
+
+    def _coverage_warnings(self, page: Page, captured_count: int) -> list[str]:
+        """Flag runs that captured far fewer items than the page actually holds.
+
+        A silent YouTube DOM change (stale row selector) or an over-strict filter
+        shows up here as "many candidate rows / date sections but few captured",
+        so a degraded scrape stops masquerading as a healthy `success` run.
+        """
+        counts = page.evaluate(
+            """
+            (rowSelector) => ({
+              rows: document.querySelectorAll(rowSelector).length,
+              sections: document.querySelectorAll('ytd-item-section-renderer').length,
+            })
+            """,
+            _ROW_SELECTOR,
+        )
+        rows = counts["rows"]
+        sections = counts["sections"]
+        logger.info(
+            "history capture: %d items from %d candidate rows across %d date sections",
+            captured_count,
+            rows,
+            sections,
+        )
+
+        warnings: list[str] = []
+        if rows >= 10 and captured_count < rows * 0.5:
+            warnings.append(
+                f"History capture looks low: extracted {captured_count} items from "
+                f"{rows} candidate rows on the page — the row selector or extraction "
+                "filter may be stale (YouTube DOM change)."
+            )
+        if sections >= 3 and captured_count <= sections:
+            warnings.append(
+                f"History capture looks collapsed: {captured_count} items across "
+                f"{sections} date sections (~one per day) — extraction may be reading "
+                "one video per date group instead of all of them."
+            )
+        return warnings
 
     def _diagnose_empty_history(self, page: Page) -> str:
         diagnostics = page.evaluate(
