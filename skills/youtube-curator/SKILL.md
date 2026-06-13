@@ -51,7 +51,7 @@ signal**; repeated recommendations are a signal, not proof of quality.
    11-char video ID** (not a full URL — `?`/`&` break it), run exactly this and
    return one 2–3 sentence summary per video:
    ```
-   cd /home/dan-parii/Documents/HermesYoutubeCurator && .venv/bin/python -m hermes_youtube_curator.cli.collector fetch-transcript --url <VIDEO_ID> --save
+   cd @@REPO@@ && .venv/bin/python -m hermes_youtube_curator.cli.collector fetch-transcript --url <VIDEO_ID> --save
    ```
    Use the summaries to sharpen each "Why".
 5. **Delegate the wiki-enricher** (`delegate_task`, `toolsets: ["file"]`), before

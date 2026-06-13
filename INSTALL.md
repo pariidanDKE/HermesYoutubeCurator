@@ -149,16 +149,24 @@ the curator *cron job* itself, by skill name — no job id to substitute.)
 ## 4. Deploy the skill
 
 **Goal:** the curator agent loads the `youtube-curator` skill each run; Hermes
-discovers skills under `<HERMES_HOME>/skills/`.
+discovers skills under `<HERMES_HOME>/skills/`. The skill's transcript-fetch
+command ships with a `@@REPO@@` placeholder (the curator `cd`s into the repo to
+run the collector from its venv), so it must be substituted at deploy time — just
+like the launcher in step 2.
 
-**Do:**
+**Do:** copy the skill into `<HERMES_HOME>/skills/`, replacing every `@@REPO@@`
+with `<REPO>`:
 ```bash
 DST="$HOME/.hermes/skills/youtube-curator"
 mkdir -p "$DST"
 cp -r skills/youtube-curator/. "$DST/"
+# bake the real repo path into the transcript-fetch command
+find "$DST" -type f -name '*.md' -exec \
+    sed -i '' "s|@@REPO@@|$(pwd)|g" {} +   # Linux/WSL: drop the '' after -i
 ```
 
-✅ Verify: `test -f "$DST/SKILL.md" && echo OK`
+✅ Verify: `test -f "$DST/SKILL.md" && echo OK` and
+`grep -rc @@REPO@@ "$DST"` prints `0` (no placeholders left).
 
 ---
 
