@@ -31,7 +31,7 @@ Two heavy/untrusted jobs are isolated into delegated subagents so they never ent
 
 - **Hermes Agent** installed, with a model connected and a **Telegram** bot + home channel. (Any Hermes-supported model works; this build was developed against local vLLM — Gemma-4-12B / Qwen3.5-9B.) Don't have these yet? [`INSTALL.md` → Step 0](INSTALL.md) has the checks and the official sources for [installing Hermes](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart), [connecting a model](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), and [setting up the Telegram gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
 - **`uv`** (https://docs.astral.sh/uv/) for the Python env.
-- **Google Chrome** on `PATH` (`google-chrome` / `google-chrome-stable`) — used for the logged-in scrape. Playwright connects to it over CDP, so no extra browser download is needed.
+- **Google Chrome** — used for the logged-in scrape; Playwright connects to it over CDP, so no extra browser download is needed. The launcher auto-detects it on `PATH` (`google-chrome`/`chrome`/`chromium`) or in the standard macOS/Windows install location.
 - Python ≥ 3.11.
 
 ## Setup
@@ -62,7 +62,7 @@ Then follow **[`INSTALL.md`](INSTALL.md)** — a verify-as-you-go runbook (each 
    ```
    Sign in on the Chrome window that opens, then close it. The cron reuses that logged-in profile (at `.local/state/hermes-youtube-curator/chrome-profile`) to read your personalised feed.
 3. Confirm a **model + Telegram** are connected in Hermes.
-4. **Restart the gateway** so the plugin + job load: `systemctl --user restart hermes-gateway`.
+4. **Restart the gateway** so the plugin + job load: `hermes gateway restart`.
 5. **Test:** run the `YouTube Curator` job from `hermes cron list`.
 
 ## Repo layout

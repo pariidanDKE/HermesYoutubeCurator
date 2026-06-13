@@ -37,15 +37,27 @@ Before anything below, confirm these exist:
   vLLM — pick a model with reliable tool-calling, the flow does two delegations
   per run.)
 - **`uv`** — https://docs.astral.sh/uv/ (manages the Python env).
-- **Google Chrome** on `PATH` (`google-chrome` / `google-chrome-stable`) — used
-  for the logged-in scrape over CDP; no separate browser download needed.
+- **Google Chrome** — used for the logged-in scrape over CDP; no separate browser
+  download needed. The step-8 launcher auto-detects it on `PATH`
+  (`google-chrome`/`chrome`/`chromium`) or in the standard macOS
+  (`/Applications/Google Chrome.app`) and Windows (`Program Files`) install
+  location.
 - **Python ≥ 3.11.**
 
 ✅ Verify:
 ```bash
-command -v uv && command -v hermes && (command -v google-chrome || command -v google-chrome-stable)
+command -v uv && command -v hermes
 test -d "${HERMES_HOME:-$HOME/.hermes}" && echo "hermes home OK"
 ```
+Chrome isn't checked here — its binary name/location differs per OS; step 8's
+launcher auto-detects it and errors clearly if it's missing.
+
+> **Platform note.** Written for Linux/macOS, where every command below runs
+> as-is. **macOS** works unchanged. **WSL2** behaves like Linux. **Native
+> Windows** runs these through the Git Bash that Hermes bundles, but with two
+> swaps: use `.venv/Scripts/python.exe` (not `.venv/bin/python`), and your Hermes
+> home is `%LOCALAPPDATA%\hermes` (not `~/.hermes`). WSL2 is the smoother Windows
+> route.
 
 ### Step 0 — Is Hermes itself ready?  🧑 USER ACTION REQUIRED
 
@@ -260,10 +272,10 @@ channel work (e.g. send yourself a test message).
 
 **Do:**
 ```bash
-systemctl --user restart hermes-gateway
+hermes gateway restart
 ```
 
-✅ Verify: `systemctl --user status hermes-gateway` shows it active (running).
+✅ Verify: `hermes gateway status` shows it running.
 
 ---
 
