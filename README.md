@@ -30,10 +30,11 @@ Two heavy/untrusted jobs are isolated into delegated subagents so they never ent
 ## Pipeline (detailed flow)
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'lineColor':'#94a3b8','primaryBorderColor':'#cbd5e1'},'flowchart':{'curve':'basis','padding':14,'nodeSpacing':45,'rankSpacing':55}}}%%
 flowchart TD
-    cron["⏰ Hermes cron — 08:00 daily"] --> sh["youtube-curator-collect.sh<br/>(cron job script)"]
+    cron(["⏰ &nbsp;Hermes cron — 08:00 daily"]) --> sh["youtube-curator-collect.sh<br/><i>cron job script</i>"]
 
-    subgraph collect["1 · Collect — deterministic scrape, no LLM"]
+    subgraph collect["① &nbsp;COLLECT &nbsp;·&nbsp; deterministic scrape, no LLM"]
         direction TB
         sh --> cdp{"Chrome CDP<br/>reachable on :9222?"}
         cdp -- "no" --> launch["launch_youtube_browser.py<br/>your logged-in Chrome profile"]
@@ -42,34 +43,56 @@ flowchart TD
         scrape --> raw[("raw/ wiki layer<br/>recommendation-events.jsonl<br/>watch-history-events.jsonl<br/>videos.json")]
     end
 
-    sh -- "stdout: absolute paths<br/>injected into the agent prompt" --> curator
-    raw -. "bounded 'recent' slices<br/>(never read whole)" .-> curator
+    sh -- "stdout: absolute paths<br/>injected into prompt" --> curator
+    raw -. "bounded 'recent' slices" .-> curator
     interests[("interests.md<br/>taste profile")] -. "primary ranking signal" .-> curator
 
-    subgraph orch["2 · Curate — orchestrator agent (youtube-curator skill)"]
-        direction TB
-        curator["🧠 Curator agent<br/>rank → shortlist → assign tiers"]
+    subgraph orch["② &nbsp;CURATE &nbsp;·&nbsp; orchestrator agent (youtube-curator skill)"]
+        curator["🧠 &nbsp;<b>Curator agent</b><br/>rank → shortlist → assign tiers"]
     end
 
     curator -- "delegate · isolate context" --> tsub
     curator -- "delegate · isolate context" --> wsub
 
-    subgraph iso["3 · Delegated subagents — isolated context; untrusted content never reaches the curator"]
+    subgraph iso["③ &nbsp;DELEGATED SUBAGENTS &nbsp;·&nbsp; isolated context — untrusted content never reaches the curator"]
         direction TB
-        tsub["TRANSCRIPT subagent<br/>toolset: terminal"]
-        wsub["WIKI-ENRICHER subagent<br/>toolset: file"]
-        guard{{"🛡️ curator-subagent-guard<br/>pre_tool_call hook · default-deny<br/>(scoped to cron curator subagents only)"}}
+        tsub["📄 &nbsp;TRANSCRIPT subagent<br/><i>toolset: terminal</i>"]
+        wsub["📚 &nbsp;WIKI-ENRICHER subagent<br/><i>toolset: file</i>"]
+        guard{{"🛡️ &nbsp;<b>curator-subagent-guard</b><br/>pre_tool_call · default-deny<br/><i>scoped to cron curator subagents</i>"}}
         tsub --> guard
         wsub --> guard
-        guard -- "terminal: ONLY the exact fetch-transcript argv<br/>(no chaining / redirect / sub-shell)" --> twork["fetch + save + summarize<br/>UNTRUSTED transcript text"]
-        guard -- "read_file / search_files<br/>(reads can't exfiltrate: no shell/network)" --> wwork
-        guard -- "write_file / patch: ONLY under entities/ · concepts/<br/>or interests.md / index.md / log.md (absolute paths)" --> wwork["write durable wiki pages"]
-        guard -- "anything else" --> deny["⛔ DENIED"]
+        guard -- "terminal: ONLY the exact<br/>fetch-transcript argv<br/>(no chaining / redirect / sub-shell)" --> twork["fetch + save + summarize<br/><b>UNTRUSTED</b> transcript text"]
+        guard -- "read_file / search_files<br/>(reads can't exfiltrate)" --> wwork
+        guard -- "write / patch: ONLY entities/ · concepts/<br/>or interests / index / log.md" --> wwork["write durable wiki pages"]
+        guard -- "anything else" --> deny["⛔ &nbsp;DENIED"]
         wwork --> wikiout[("entities/ + concepts/<br/>interests.md")]
     end
 
     twork -- "2–3 sentence summaries<br/>(sharpen each pick's 'Why')" --> curator
-    curator ==> digest["📱 3-tier Telegram digest<br/>🧠 learning · 🎤 infotainment · 🍿 entertainment"]
+    curator ==> digest["📱 &nbsp;<b>3-tier Telegram digest</b><br/>🧠 learning · 🎤 infotainment · 🍿 entertainment"]
+
+    %% ---------- styling ----------
+    classDef cronCls   fill:#faf5ff,stroke:#a855f7,stroke-width:1.5px,color:#581c87;
+    classDef collectCls fill:#ecfdf5,stroke:#10b981,stroke-width:1.2px,color:#065f46;
+    classDef agentCls  fill:#eef2ff,stroke:#6366f1,stroke-width:2px,color:#312e81;
+    classDef subCls    fill:#fff7ed,stroke:#f59e0b,stroke-width:1.2px,color:#7c2d12;
+    classDef guardCls  fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d;
+    classDef denyCls   fill:#dc2626,stroke:#991b1b,stroke-width:1.2px,color:#ffffff;
+    classDef dataCls   fill:#f1f5f9,stroke:#94a3b8,stroke-width:1.2px,color:#334155;
+    classDef outCls    fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+
+    class cron cronCls;
+    class sh,cdp,launch,scrape collectCls;
+    class raw,interests,wikiout dataCls;
+    class curator agentCls;
+    class tsub,wsub,twork,wwork subCls;
+    class guard guardCls;
+    class deny denyCls;
+    class digest outCls;
+
+    style collect fill:#f0fdf4,stroke:#86efac,color:#065f46;
+    style orch fill:#f5f3ff,stroke:#c4b5fd,color:#4c1d95;
+    style iso fill:#fffbeb,stroke:#fcd34d,color:#78350f;
 ```
 
 **Reading the diagram:**
