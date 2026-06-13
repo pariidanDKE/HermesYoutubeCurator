@@ -27,44 +27,6 @@ cron (08:00)
 
 Two heavy/untrusted jobs are isolated into delegated subagents so they never enter the curator's context. A `pre_tool_call` guard plugin (`curator-subagent-guard`) hard-restricts those subagents: the transcript one may *only* run the `fetch-transcript` command; the enricher may *only* write under the wiki's `entities/`/`concepts/` dirs — defense-in-depth against prompt injection from untrusted transcript text. See [deploy/plugins/curator-subagent-guard/](deploy/plugins/curator-subagent-guard/).
 
-## Prerequisites
-
-- **Hermes Agent** installed, with a model connected and a **Telegram** bot + home channel. (Any Hermes-supported model works; this build was developed against local vLLM — Gemma-4-12B / Qwen3.5-9B.) Don't have these yet? [`INSTALL.md` → Step 0](INSTALL.md) has the checks and the official sources for [installing Hermes](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart), [connecting a model](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), and [setting up the Telegram gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
-- **`uv`** (https://docs.astral.sh/uv/) for the Python env.
-- **Google Chrome** — used for the logged-in scrape; Playwright connects to it over CDP, so no extra browser download is needed. The launcher auto-detects it on `PATH` (`google-chrome`/`chrome`/`chromium`) or in the standard macOS/Windows install location.
-- Python ≥ 3.11.
-
-## Setup
-
-```bash
-git clone <this-repo> && cd HermesYoutubeCurator
-```
-
-Then follow **[`INSTALL.md`](INSTALL.md)** — a verify-as-you-go runbook (each step says what it's for, what to run, and how to check it). You can run it yourself or hand the whole file to your agent. It does the mechanical wiring:
-
-- `uv sync` → builds `.venv` with the package + Playwright
-- deploys the launcher to `~/.hermes/scripts/` (cron requires scripts there)
-- deploys the guard plugin to `~/.hermes/plugins/` (substituting your wiki path)
-- deploys the skill to `~/.hermes/skills/youtube-curator/`
-- creates the cron job and sets its `enabled_toolsets` (`terminal`, `delegation`, `file`)
-
-…and walks you through the **manual steps only you can do**:
-
-1. **Enable the guard** in `~/.hermes/config.yaml`:
-   ```yaml
-   plugins:
-     enabled:
-       - curator-subagent-guard
-   ```
-2. **Log into YouTube once** in the scraping profile:
-   ```bash
-   .venv/bin/python scripts/launch_youtube_browser.py
-   ```
-   Sign in on the Chrome window that opens, then close it. The cron reuses that logged-in profile (at `.local/state/hermes-youtube-curator/chrome-profile`) to read your personalised feed.
-3. Confirm a **model + Telegram** are connected in Hermes.
-4. **Restart the gateway** so the plugin + job load: `hermes gateway restart`.
-5. **Test:** run the `YouTube Curator` job from `hermes cron list`.
-
 ## Repo layout
 
 ```
@@ -79,6 +41,23 @@ INSTALL.md                         # runbook that wires all of the above into ~/
 ```
 
 The repo is the single source of truth; following [`INSTALL.md`](INSTALL.md) copies the deployable parts into `~/.hermes/`. State (the wiki, the Chrome profile, raw events) lives under `.local/state/` and is git-ignored.
+
+## Getting started
+
+You bring:
+
+- **Hermes Agent** — installed, with a model connected and a **Telegram** bot + home channel
+- **`uv`** ([docs](https://docs.astral.sh/uv/)) for the Python env
+- **Google Chrome** — for the logged-in scrape (Playwright connects over CDP; no extra download)
+- **Python ≥ 3.11**
+
+Then:
+
+```bash
+git clone <this-repo> && cd HermesYoutubeCurator
+```
+
+…and follow **[`INSTALL.md`](INSTALL.md)** — a verify-as-you-go runbook that wires the deployable parts into your Hermes install and walks you through the manual steps (YouTube login, enabling the guard, gateway restart). Don't have Hermes/a model/Telegram yet? [Step 0](INSTALL.md) links the official sources. Each step says what it's for, what to run, and how to check it — so you can run it yourself or hand the whole file to your agent.
 
 ## Notes & limitations
 
