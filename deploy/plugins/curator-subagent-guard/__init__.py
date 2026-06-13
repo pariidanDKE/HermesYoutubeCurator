@@ -47,6 +47,7 @@ import json
 import logging
 import os
 import re
+import shlex
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -107,17 +108,90 @@ _ALLOWED_WRITE_FILES = frozenset(
 )
 
 
+# The ONLY command shape the transcript subagent may run, validated as an exact
+# argv structure (parsed with shlex), NOT by substring/regex matching of a
+# free-form string. Substring matching was bypassable: a `python -c "<payload>"`
+# whose code used no shell metacharacters, suffixed with a
+# `#... collector ... fetch-transcript` comment, satisfied the old substring +
+# leading-token checks and ran arbitrary code. The argv allowlist below makes the
+# module invocation (`-m <module> fetch-transcript`) and every flag a discrete,
+# checked token, so `-c`, comments, env prefixes, and extra args are all rejected.
+_PYTHON_INTERP = re.compile(r"^(.*/)?python[0-9.]*$")  # python, python3, .venv/bin/python
+_COLLECTOR_MODULE = "hermes_youtube_curator.cli.collector"
+_VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")  # bare YouTube id; the skill mandates this form
+_LANG_CODES = re.compile(r"^[A-Za-z][A-Za-z-]*(,[A-Za-z][A-Za-z-]*)*$")  # e.g. en,tr,zh-Hant
+_INT = re.compile(r"^\d+$")
+# fetch-transcript flags. Value flags map to a validator for their value; bool
+# flags take none. Anything not listed here is denied.
+_TRANSCRIPT_VALUE_FLAGS = {
+    "--url": lambda v: bool(_VIDEO_ID.match(v)),
+    "--max-chars": lambda v: bool(_INT.match(v)),
+    "--language": lambda v: bool(_LANG_CODES.match(v)),
+}
+_TRANSCRIPT_BOOL_FLAGS = {"--save"}
+
+
 def _is_allowed_transcript_command(command: str) -> bool:
+    """True only for the curator's exact fetch-transcript invocation.
+
+    Validates an argv structure rather than matching substrings against a
+    free-form string, because the terminal tool runs the command through a shell:
+    any laxity here is arbitrary code execution on the cron host. The single
+    permitted shape (optionally prefixed by one `cd <dir> &&` and/or suffixed by a
+    benign `2>&1`) is:
+
+        <python> -m hermes_youtube_curator.cli.collector fetch-transcript \
+            --url <11-char-id> [--save] [--max-chars <int>] [--language <codes>]
+    """
     cmd = (command or "").strip()
-    # Must be the curator's own collector module + the fetch-transcript subcommand.
-    if "hermes_youtube_curator.cli.collector" not in cmd or "fetch-transcript" not in cmd:
+    cmd = _CD_PREFIX.sub("", cmd, count=1)  # strip the one permitted `cd <dir> &&`
+    cmd = _TRAILING_STDERR_REDIR.sub("", cmd).strip()  # allow a benign trailing `2>&1`
+    if not cmd or "#" in cmd:
+        return False  # a `#` comment can smuggle tokens / hide a payload — never needed
+
+    try:
+        tokens = shlex.split(cmd, comments=False, posix=True)
+    except ValueError:
+        return False  # unbalanced quotes etc.
+    if not tokens:
         return False
-    rest = _CD_PREFIX.sub("", cmd, count=1)  # strip the one permitted `cd ... &&`
-    rest = _TRAILING_STDERR_REDIR.sub("", rest)  # allow a benign trailing `2>&1`
-    if _CHAINING.search(rest):
-        return False  # no second command, pipe, redirect, or subshell
-    # What remains must be a python invocation (e.g. ".venv/bin/python -m ...").
-    return bool(re.match(r"^\S*python[0-9.]*\s", rest))
+    # shlex does NOT split on shell operators (`; | & > <`, `$(`, `${`, backticks);
+    # they stay embedded in tokens. Reject any token still carrying one, so nothing
+    # can chain, redirect, or substitute a second command.
+    if any(_CHAINING.search(tok) for tok in tokens):
+        return False
+
+    # argv[0] must be a python interpreter — not `env`, not a `VAR=val` prefix.
+    if not _PYTHON_INTERP.match(tokens[0]):
+        return False
+    # Exactly: -m <collector module> fetch-transcript ... (rejects -c, -, -i, etc.)
+    rest = tokens[1:]
+    if rest[:3] != ["-m", _COLLECTOR_MODULE, "fetch-transcript"]:
+        return False
+
+    # Validate the remaining flags against the strict allowlist.
+    flags = rest[3:]
+    i = 0
+    while i < len(flags):
+        tok = flags[i]
+        key, sep, inline = tok.partition("=")
+        if key in _TRANSCRIPT_BOOL_FLAGS:
+            if sep:  # `--save=x` is not valid for a store_true flag
+                return False
+            i += 1
+        elif key in _TRANSCRIPT_VALUE_FLAGS:
+            validate = _TRANSCRIPT_VALUE_FLAGS[key]
+            if sep:  # `--url=ID` form
+                if not validate(inline):
+                    return False
+                i += 1
+            else:  # `--url ID` form
+                if i + 1 >= len(flags) or not validate(flags[i + 1]):
+                    return False
+                i += 2
+        else:
+            return False  # unknown flag or bare positional
+    return "--url" in {f.partition("=")[0] for f in flags}  # --url is required
 
 
 def _is_allowed_write_path(path: str) -> bool:
