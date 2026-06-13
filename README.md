@@ -27,6 +27,57 @@ cron (08:00)
 
 Two heavy/untrusted jobs are isolated into delegated subagents so they never enter the curator's context. A `pre_tool_call` guard plugin (`curator-subagent-guard`) hard-restricts those subagents: the transcript one may *only* run the `fetch-transcript` command; the enricher may *only* write under the wiki's `entities/`/`concepts/` dirs — defense-in-depth against prompt injection from untrusted transcript text. See [deploy/plugins/curator-subagent-guard/](deploy/plugins/curator-subagent-guard/).
 
+## Pipeline (detailed flow)
+
+```mermaid
+flowchart TD
+    cron["⏰ Hermes cron — 08:00 daily"] --> sh["youtube-curator-collect.sh<br/>(cron job script)"]
+
+    subgraph collect["1 · Collect — deterministic scrape, no LLM"]
+        direction TB
+        sh --> cdp{"Chrome CDP<br/>reachable on :9222?"}
+        cdp -- "no" --> launch["launch_youtube_browser.py<br/>your logged-in Chrome profile"]
+        launch --> scrape
+        cdp -- "yes" --> scrape["refresh-home + refresh-history<br/>Playwright drives YouTube over CDP"]
+        scrape --> raw[("raw/ wiki layer<br/>recommendation-events.jsonl<br/>watch-history-events.jsonl<br/>videos.json")]
+    end
+
+    sh -- "stdout: absolute paths<br/>injected into the agent prompt" --> curator
+    raw -. "bounded 'recent' slices<br/>(never read whole)" .-> curator
+    interests[("interests.md<br/>taste profile")] -. "primary ranking signal" .-> curator
+
+    subgraph orch["2 · Curate — orchestrator agent (youtube-curator skill)"]
+        direction TB
+        curator["🧠 Curator agent<br/>rank → shortlist → assign tiers"]
+    end
+
+    curator -- "delegate · isolate context" --> tsub
+    curator -- "delegate · isolate context" --> wsub
+
+    subgraph iso["3 · Delegated subagents — isolated context; untrusted content never reaches the curator"]
+        direction TB
+        tsub["TRANSCRIPT subagent<br/>toolset: terminal"]
+        wsub["WIKI-ENRICHER subagent<br/>toolset: file"]
+        guard{{"🛡️ curator-subagent-guard<br/>pre_tool_call hook · default-deny<br/>(scoped to cron curator subagents only)"}}
+        tsub --> guard
+        wsub --> guard
+        guard -- "terminal: ONLY the exact fetch-transcript argv<br/>(no chaining / redirect / sub-shell)" --> twork["fetch + save + summarize<br/>UNTRUSTED transcript text"]
+        guard -- "read_file / search_files<br/>(reads can't exfiltrate: no shell/network)" --> wwork
+        guard -- "write_file / patch: ONLY under entities/ · concepts/<br/>or interests.md / index.md / log.md (absolute paths)" --> wwork["write durable wiki pages"]
+        guard -- "anything else" --> deny["⛔ DENIED"]
+        wwork --> wikiout[("entities/ + concepts/<br/>interests.md")]
+    end
+
+    twork -- "2–3 sentence summaries<br/>(sharpen each pick's 'Why')" --> curator
+    curator ==> digest["📱 3-tier Telegram digest<br/>🧠 learning · 🎤 infotainment · 🍿 entertainment"]
+```
+
+**Reading the diagram:**
+
+- **1 · Collect** is pure scraping — no model. The cron job's script (`youtube-curator-collect.sh`) ensures a logged-in Chrome is up on the CDP port, runs the two deterministic collectors, and writes the append-only `raw/` evidence. Its stdout (a list of absolute wiki paths) is piped into the curator's prompt as ground truth for the run.
+- **2 · Curate** is the only place the orchestrator's own context lives. It reads *bounded* `recent` slices of the raw events plus `interests.md` (the taste profile), ranks against them, and builds the tiered shortlist — it never reads the large raw files or transcripts directly.
+- **3 · Delegated subagents** run the heavy/untrusted work in throwaway context: the **transcript** subagent ingests untrusted video transcript text (a prime prompt-injection vector), and the **enricher** turns saved transcripts into durable wiki pages. Their toolsets already separate them (transcript has no file tools; enricher has no shell), and the **guard** adds a deterministic, default-deny allowlist on top — so even a fully hijacked subagent can only do its one narrow job. Only the transcript *summaries* (not the raw text) flow back to the curator.
+
 ## Repo layout
 
 ```
