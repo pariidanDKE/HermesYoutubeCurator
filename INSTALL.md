@@ -36,7 +36,11 @@ Before anything below, confirm these exist:
   home channel. (Any Hermes-supported model works; this was built against local
   vLLM — pick a model with reliable tool-calling, the flow does two delegations
   per run.)
-- **`uv`** — https://docs.astral.sh/uv/ (manages the Python env).
+- **`uv`** — https://docs.astral.sh/uv/ (manages the Python env). Install it
+  **standalone** (the official installer: `curl -LsSf https://astral.sh/uv/install.sh | sh`),
+  **not** through pyenv/`pip install uv` inside a Python env. A pyenv-shimmed `uv`
+  lets pyenv read this repo's `.python-version` *first* and demand an exact
+  installed version, which breaks `uv sync` in step 1.
 - **Google Chrome** — used for the logged-in scrape over CDP; no separate browser
   download needed. The step-8 launcher auto-detects it on `PATH`
   (`google-chrome`/`chrome`/`chromium`) or in the standard macOS
