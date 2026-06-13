@@ -111,15 +111,26 @@ class HistoryCollector:
               // (e.g. "Today", "Yesterday", "Jun 6") containing many videos. We must
               // iterate the individual video cards inside the sections, not the
               // sections themselves, or we capture only one video per day.
+              //
+              // YouTube has migrated history rows to the newer `yt-lockup-view-model`
+              // component; the legacy `ytd-video-renderer` is all but gone. We match
+              // both so a future re-migration in either direction keeps working.
               const nodes = Array.from(document.querySelectorAll(
-                'ytd-video-renderer, ytd-rich-item-renderer, ytd-reel-item-renderer'
+                'yt-lockup-view-model, ytd-video-renderer, ytd-rich-item-renderer, ytd-reel-item-renderer'
               ));
 
               return nodes.map((card) => {
                 const link = card.querySelector('a#video-title, a[href*="/watch"], a[href*="/shorts/"]');
-                const titleHeading = Array.from(card.querySelectorAll('h3, #video-title, yt-formatted-string'))
+                // `.yt-lockup-metadata-view-model__title` is the lockup title; the
+                // h3/#video-title/yt-formatted-string variants cover legacy renderers.
+                const titleHeading = Array.from(card.querySelectorAll(
+                  '.yt-lockup-metadata-view-model__title, h3 a span, h3, #video-title, yt-formatted-string'))
                   .map((node) => clean(node.textContent))
                   .find((value) => value && !/^(today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i.test(value));
+                // Lockups expose the title as a non-"Go to channel" aria-label too.
+                const titleAria = Array.from(card.querySelectorAll('a[aria-label]'))
+                  .map((node) => node.getAttribute('aria-label') || '')
+                  .find((value) => value && !value.startsWith('Go to channel '));
                 const metadata = Array.from(card.querySelectorAll('#metadata-line span, .metadata-snippet-text'))
                   .map((node) => (node.textContent || '').replace(/\\s+/g, ' ').trim())
                   .filter(Boolean);
@@ -140,7 +151,7 @@ class HistoryCollector:
                   /ago|today|yesterday|just now/i.test(value)
                 ) || text.match(/(?:just now|today|yesterday|\\d+\\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\\s+ago)/i)?.[0]
                   || sectionHeader;
-                const title = titleHeading || clean(link?.getAttribute('title') || link?.textContent);
+                const title = titleHeading || clean(titleAria) || clean(link?.getAttribute('title') || link?.textContent);
                 return {
                   title,
                   channel_name: channelName,
