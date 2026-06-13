@@ -18,6 +18,9 @@ class Settings:
     youtube_home_scroll_count: int = 3
     youtube_scroll_pause_seconds: float = 1.5
     youtube_capture_timeout_seconds: int = 30
+    # History is its own (deeper) feed; a few extra scrolls past the home default
+    # covers recent days without trying to walk the entire multi-year backlog.
+    youtube_history_scroll_count: int = 6
     youtube_home_url: str = "https://www.youtube.com/"
     youtube_history_url: str = "https://www.youtube.com/feed/history"
 
@@ -47,6 +50,9 @@ class Settings:
             ),
             youtube_capture_timeout_seconds=int(
                 os.getenv("HYC_YOUTUBE_CAPTURE_TIMEOUT_SECONDS", "30")
+            ),
+            youtube_history_scroll_count=int(
+                os.getenv("HYC_YOUTUBE_HISTORY_SCROLL_COUNT", "6")
             ),
         )
 

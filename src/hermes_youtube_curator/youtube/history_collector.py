@@ -79,7 +79,7 @@ class HistoryCollector:
         captured: dict[str, HistoryItem] = {}
         display_position = 1
 
-        for capture_index in range(settings.youtube_home_scroll_count + 1):
+        for capture_index in range(settings.youtube_history_scroll_count + 1):
             for entry in self._extract_visible_history(page):
                 dedupe_key = entry["video_id"] or entry["url"] or entry["title"]
                 if dedupe_key in captured:
@@ -95,7 +95,7 @@ class HistoryCollector:
                 )
                 display_position += 1
 
-            if capture_index == settings.youtube_home_scroll_count:
+            if capture_index == settings.youtube_history_scroll_count:
                 break
             page.mouse.wheel(0, 1400)
             sleep(settings.youtube_scroll_pause_seconds)
@@ -107,9 +107,13 @@ class HistoryCollector:
             """
             () => {
               const clean = (value) => (value || '').replace(/\\s+/g, ' ').trim();
-              const sectionNodes = Array.from(document.querySelectorAll('ytd-item-section-renderer'));
-              const fallbackNodes = Array.from(document.querySelectorAll('ytd-video-renderer, ytd-rich-item-renderer'));
-              const nodes = sectionNodes.length > 0 ? sectionNodes : fallbackNodes;
+              // Each ytd-item-section-renderer on the history page is a *date group*
+              // (e.g. "Today", "Yesterday", "Jun 6") containing many videos. We must
+              // iterate the individual video cards inside the sections, not the
+              // sections themselves, or we capture only one video per day.
+              const nodes = Array.from(document.querySelectorAll(
+                'ytd-video-renderer, ytd-rich-item-renderer, ytd-reel-item-renderer'
+              ));
 
               return nodes.map((card) => {
                 const link = card.querySelector('a#video-title, a[href*="/watch"], a[href*="/shorts/"]');
