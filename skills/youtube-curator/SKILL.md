@@ -2,7 +2,7 @@
 name: youtube-curator
 description: "Personal YouTube recommendation curator using repo-collected raw wiki evidence."
 version: 0.3.0
-platforms: [linux]
+platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [youtube, curator, recommendations, telegram, wiki]
