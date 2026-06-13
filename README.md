@@ -61,9 +61,9 @@ flowchart TD
         guard{{"🛡️ &nbsp;<b>curator-subagent-guard</b><br/>pre_tool_call · default-deny<br/><i>scoped to cron curator subagents</i>"}}
         tsub --> guard
         wsub --> guard
-        guard -- "terminal: ONLY the exact<br/>fetch-transcript argv<br/>(no chaining / redirect / sub-shell)" --> twork["fetch + save + summarize<br/><b>UNTRUSTED</b> transcript text"]
-        guard -- "read_file / search_files<br/>(reads can't exfiltrate)" --> wwork
-        guard -- "write / patch: ONLY entities/ · concepts/<br/>or interests / index / log.md" --> wwork["write durable wiki pages"]
+        guard -- "only the transcript-fetch command" --> twork["fetch + save + summarize<br/><b>UNTRUSTED</b> transcript text"]
+        guard -- "may read files" --> wwork
+        guard -- "only writes inside the wiki folder" --> wwork["write durable wiki pages"]
         guard -- "anything else" --> deny["⛔ &nbsp;DENIED"]
         wwork --> wikiout[("entities/ + concepts/<br/>interests.md")]
     end
