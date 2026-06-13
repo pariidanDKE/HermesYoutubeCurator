@@ -12,6 +12,71 @@ from hermes_youtube_curator.models import (
     utc_now,
 )
 
+# Steering for the wiki-enricher subagent. Lives in the wiki (read at run time)
+# rather than the curator skill, so the curator's prompt stays lean and the
+# wiki's operating manual lives with the wiki. This is a distilled version of the
+# `llm-wiki` skill scoped to the curator's narrow enrichment job.
+_AGENT_GUIDE = """# Wiki Agent Guide
+
+This folder is a personal YouTube-curation knowledge base (Karpathy LLM-wiki
+pattern). It compounds durable knowledge across daily curator runs so curation
+gets smarter about the user's taste over time.
+
+## What's here
+- `raw/` — immutable source material; NEVER edit. `raw/curator/` has the collected
+  recommendation/history events + `videos.json`; `raw/transcripts/<id>.md` holds
+  full video transcripts saved during a run.
+- `entities/` — pages for concrete things: channels, people, tools, products, orgs.
+- `concepts/` — pages for durable topics / interests / formats / taste patterns.
+- `comparisons/`, `queries/` — side-by-side analyses and saved answers.
+- `interests.md` — the user's evolving taste profile (see below). The single most
+  important page for steering curation.
+- `SCHEMA.md`, `index.md`, `log.md` — structure spec, page catalog, action log.
+
+## You are the wiki-enricher subagent
+You are given a shortlist of digest videos + transcript summaries, and the absolute
+paths to `entities/`, `concepts/`, `interests.md`, and `user_memory_path` (the
+user's stated-taste memory file). Turn that into durable wiki knowledge WITHOUT
+polluting the wiki. Do the steps IN THIS ORDER — the high-value updates come first
+so they are never dropped:
+
+1. ORIENT — read `SCHEMA.md` and `index.md`, and `search_files` existing
+   `entities/`/`concepts/` before creating a page so you extend, not duplicate.
+   Then `read_file` `user_memory_path` once and pull out ONLY the lines about the
+   user's YouTube/content taste — ignore unrelated facts. Work from the **transcript
+   summaries already in your context** — do NOT open files under `raw/transcripts/`;
+   reading full transcripts will exhaust your turn budget before you write anything.
+   Cover ONLY channels/topics in the provided shortlist; skip ephemeral items.
+2. UPDATE `interests.md` FIRST (see below) — the single highest-value action, done
+   before any page. Fold in the user's stated taste from `user_memory_path` as the
+   HIGHEST-weight signal (it is explicit human feedback), merged with what the
+   shortlist shows. `interests.md` is the only place this taste persists for the
+   curator's ranking.
+3. WRITE PAGES — at most ~4 `entities/` and ~3 `concepts/` per run (prefer fewer),
+   each with YAML frontmatter (title, created, updated, type, tags, sources) and at
+   least 2 `[[wikilinks]]`. Append, don't rewrite: extend an existing page with a
+   dated bullet rather than overwriting it.
+4. UPDATE NAVIGATION — add each new page to `index.md` under its section, and append
+   one line to `log.md`: `## [YYYY-MM-DD] enrich | <what changed>`.
+5. GATE — before you finish, confirm you (a) updated `interests.md` and (b) appended
+   to `log.md`. If either is missing, do it NOW. Do not end until both are done.
+
+CONTAINMENT: write ONLY under the absolute `entities/`, `concepts/`, and
+`interests.md` paths you were handed, plus `index.md`/`log.md` in the same wiki
+root. Never touch `raw/`. You have no shell.
+
+## interests.md — the taste profile
+A living, evidence-grounded summary of what the user is into, used by the curator
+to rank recommendations. Keep it tight and current:
+- Maintain a short list of active interest areas (e.g. "LLM architecture",
+  "developer tooling"), each a one-line note + a few example videos/channels
+  (with video IDs) as evidence, dated when added.
+- When watch history / the shortlist shows a sustained new interest, add or
+  strengthen an area. When an area stops appearing, note it as cooling — do NOT
+  delete history; mark it.
+- Reflect only what the collected signal shows. This is taste evidence, not a wishlist.
+"""
+
 
 class WikiStore:
     def __init__(self, wiki_path: Path) -> None:
@@ -68,6 +133,10 @@ Personal YouTube curation: recommendations, watch history, videos, channels, top
 - `concepts/`: durable interests, formats, topics, and taste patterns.
 - `comparisons/`: side-by-side analyses worth preserving.
 - `queries/`: substantial saved answers or reports.
+- `interests.md`: the user's evolving taste profile — read by the curator each run to rank recommendations, maintained by the wiki-enricher.
+
+## Agent Guide
+See `AGENT.md` for what this wiki is and exactly how the wiki-enricher subagent should maintain it.
 
 ## Conventions
 - File names are lowercase, hyphenated markdown.
@@ -95,6 +164,29 @@ Personal YouTube curation: recommendations, watch history, videos, channels, top
 
 ## [{utc_now()[:10]}] create | Wiki initialized
 - Structure created for Hermes YouTube Curator.
+""",
+        )
+        self._write_once(self.wiki_path / "AGENT.md", _AGENT_GUIDE)
+        self._write_once(
+            self.wiki_path / "interests.md",
+            f"""---
+title: Personal Taste Profile
+type: profile
+created: {utc_now()[:10]}
+updated: {utc_now()[:10]}
+---
+
+# Interests
+
+> The user's evolving YouTube taste. Read by the curator each run to rank
+> recommendations; maintained by the wiki-enricher. Evidence-grounded and dated —
+> reflect only what the collected signal actually shows, not a wishlist.
+
+## Active interest areas
+<!-- One bullet per area: **Area** — one-line note. Evidence: <titles / video IDs>. (added YYYY-MM-DD) -->
+
+## Cooling / dormant
+<!-- Areas that have not appeared in recent history. Note, do not delete. -->
 """,
         )
         self._write_json_if_missing(self.videos_path, {})

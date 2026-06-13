@@ -2,7 +2,7 @@
 
 A personal YouTube recommendation curator that runs as a [Hermes Agent](https://hermes-agent.nousresearch.com) cron job. Each morning it browses *your* logged-in YouTube home feed and watch history, decides what's actually worth your time, and sends a tiered digest to Telegram — then quietly grows a small personal wiki of the topics and channels you keep coming back to.
 
-It is **not a clone-and-run app.** Like other Hermes projects (e.g. [`vigil-crest`](https://github.com/earlgreyhot1701D/vigil-crest)), it's a *configured personal setup*: you bring your own Hermes install, model, Telegram bot, and YouTube login. This repo is the recipe and the portable parts, plus a `setup.sh` that wires them together.
+It is **not a clone-and-run app.** Like other Hermes projects (e.g. [`vigil-crest`](https://github.com/earlgreyhot1701D/vigil-crest)), it's a *configured personal setup*: you bring your own Hermes install, model, Telegram bot, and YouTube login. This repo is the recipe and the portable parts; [`INSTALL.md`](INSTALL.md) is the step-by-step runbook that wires them into your Hermes install.
 
 ## What it does
 
@@ -29,7 +29,7 @@ Two heavy/untrusted jobs are isolated into delegated subagents so they never ent
 
 ## Prerequisites
 
-- **Hermes Agent** installed, with a model connected and a **Telegram** bot + home channel. (Any Hermes-supported model works; this build was developed against local vLLM — Gemma-4-12B / Qwen3.5-9B.)
+- **Hermes Agent** installed, with a model connected and a **Telegram** bot + home channel. (Any Hermes-supported model works; this build was developed against local vLLM — Gemma-4-12B / Qwen3.5-9B.) Don't have these yet? [`INSTALL.md` → Step 0](INSTALL.md) has the checks and the official sources for [installing Hermes](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart), [connecting a model](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), and [setting up the Telegram gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
 - **`uv`** (https://docs.astral.sh/uv/) for the Python env.
 - **Google Chrome** on `PATH` (`google-chrome` / `google-chrome-stable`) — used for the logged-in scrape. Playwright connects to it over CDP, so no extra browser download is needed.
 - Python ≥ 3.11.
@@ -38,10 +38,9 @@ Two heavy/untrusted jobs are isolated into delegated subagents so they never ent
 
 ```bash
 git clone <this-repo> && cd HermesYoutubeCurator
-./setup.sh
 ```
 
-`setup.sh` (idempotent — safe to re-run) does the mechanical wiring:
+Then follow **[`INSTALL.md`](INSTALL.md)** — a verify-as-you-go runbook (each step says what it's for, what to run, and how to check it). You can run it yourself or hand the whole file to your agent. It does the mechanical wiring:
 
 - `uv sync` → builds `.venv` with the package + Playwright
 - deploys the launcher to `~/.hermes/scripts/` (cron requires scripts there)
@@ -49,7 +48,7 @@ git clone <this-repo> && cd HermesYoutubeCurator
 - deploys the skill to `~/.hermes/skills/youtube-curator/`
 - creates the cron job and sets its `enabled_toolsets` (`terminal`, `delegation`, `file`)
 
-Then it prints the **manual steps only you can do**:
+…and walks you through the **manual steps only you can do**:
 
 1. **Enable the guard** in `~/.hermes/config.yaml`:
    ```yaml
@@ -76,10 +75,10 @@ skills/youtube-curator/SKILL.md    # the curator skill (Hub/agentskills.io-compa
 deploy/
   youtube-curator-collect.sh       # cron launcher (source of truth; @@REPO@@ templated)
   plugins/curator-subagent-guard/  # the security guard plugin (source of truth)
-setup.sh                           # wires all of the above into ~/.hermes/
+INSTALL.md                         # runbook that wires all of the above into ~/.hermes/
 ```
 
-The repo is the single source of truth; `setup.sh` copies the deployable parts into `~/.hermes/`. State (the wiki, the Chrome profile, raw events) lives under `.local/state/` and is git-ignored.
+The repo is the single source of truth; following [`INSTALL.md`](INSTALL.md) copies the deployable parts into `~/.hermes/`. State (the wiki, the Chrome profile, raw events) lives under `.local/state/` and is git-ignored.
 
 ## Notes & limitations
 

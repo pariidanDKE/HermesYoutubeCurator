@@ -3,10 +3,10 @@ set -euo pipefail
 
 # Hermes cron launcher for the YouTube Curator collector.
 #
-# This is the SOURCE OF TRUTH. setup.sh copies it into ~/.hermes/scripts/
-# (cron requires scripts to live there) and substitutes @@REPO@@ with the
-# real repo path. It invokes the Python package in the repo via the repo's
-# own uv-managed virtualenv (the package is NOT on system python3).
+# This is the SOURCE OF TRUTH. Deploy it by copying into ~/.hermes/scripts/
+# (cron requires scripts to live there) and substituting @@REPO@@ with the
+# real repo path — see INSTALL.md step 2. It invokes the Python package in the
+# repo via the repo's own uv-managed virtualenv (NOT on system python3).
 
 REPO="@@REPO@@"
 VENV_PY="$REPO/.venv/bin/python"
@@ -14,6 +14,11 @@ STATE="$REPO/.local/state/hermes-youtube-curator"
 WIKI="$STATE/wiki"
 RAW="$WIKI/raw/curator"
 CDP_URL="http://127.0.0.1:9222"
+# Hermes' built-in user-profile memory file (the user's chat-stated taste). The
+# wiki-enricher reads it to fold that taste into interests.md. Env-overridable,
+# mirroring how Hermes itself resolves HERMES_HOME.
+HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
+USER_MEMORY="$HERMES_HOME/memories/USER.md"
 
 cd "$REPO"
 
@@ -67,3 +72,9 @@ echo "watch_history_events=$RAW/watch-history-events.jsonl"
 echo "transcripts_path=$WIKI/raw/transcripts"
 echo "entities_path=$WIKI/entities"
 echo "concepts_path=$WIKI/concepts"
+# The curator reads interests_path each run (primary ranking signal) and hands
+# agent_guide_path + interests_path + user_memory_path to the enricher. Scaffolded
+# by WikiStore on every run; user_memory_path is Hermes' built-in profile file.
+echo "interests_path=$WIKI/interests.md"
+echo "agent_guide_path=$WIKI/AGENT.md"
+echo "user_memory_path=$USER_MEMORY"
