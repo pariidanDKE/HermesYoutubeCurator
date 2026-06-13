@@ -70,12 +70,7 @@ flowchart TD
 
     twork -- "2–3 sentence summaries<br/>(sharpen each pick's 'Why')" --> curator
     curator ==> digest["📱 &nbsp;<b>3-tier Telegram digest</b><br/>🧠 learning · 🎤 infotainment · 🍿 entertainment"]
-
-    %% ---------- taste feedback loop ----------
-    digest -. "you read it & reply" .-> convo["💬 &nbsp;You ↔ agent in Telegram<br/><i>chat-stated taste</i>"]
-    convo --> usermem[("USER.md<br/>Hermes profile memory")]
-    usermem -. "enricher folds your stated<br/>taste into interests.md" .-> wsub
-    wikiout -. "updates" .-> interests
+    digest -- "your chat replies tune it" --> taste[("interests.md<br/>taste profile")]
 
     %% ---------- styling ----------
     classDef cronCls   fill:#faf5ff,stroke:#a855f7,stroke-width:1.5px,color:#581c87;
@@ -86,15 +81,17 @@ flowchart TD
     classDef denyCls   fill:#dc2626,stroke:#991b1b,stroke-width:1.2px,color:#ffffff;
     classDef dataCls   fill:#f1f5f9,stroke:#94a3b8,stroke-width:1.2px,color:#334155;
     classDef outCls    fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+    classDef tasteCls  fill:#cffafe,stroke:#0891b2,stroke-width:2px,color:#155e75;
 
     class cron cronCls;
     class sh,cdp,launch,scrape collectCls;
-    class raw,interests,wikiout,usermem dataCls;
+    class raw,wikiout dataCls;
+    class interests,taste tasteCls;
     class curator agentCls;
     class tsub,wsub,twork,wwork subCls;
     class guard guardCls;
     class deny denyCls;
-    class digest,convo outCls;
+    class digest outCls;
 
     style collect fill:#f0fdf4,stroke:#86efac,color:#065f46;
     style orch fill:#f5f3ff,stroke:#c4b5fd,color:#4c1d95;
@@ -106,7 +103,7 @@ flowchart TD
 - **1 · Collect** is pure scraping — no model. The cron job's script (`youtube-curator-collect.sh`) ensures a logged-in Chrome is up on the CDP port, runs the two deterministic collectors, and writes the append-only `raw/` evidence. Its stdout (a list of absolute wiki paths) is piped into the curator's prompt as ground truth for the run.
 - **2 · Curate** is the only place the orchestrator's own context lives. It reads *bounded* `recent` slices of the raw events plus `interests.md` (the taste profile), ranks against them, and builds the tiered shortlist — it never reads the large raw files or transcripts directly.
 - **3 · Delegated subagents** run the heavy/untrusted work in throwaway context: the **transcript** subagent ingests untrusted video transcript text (a prime prompt-injection vector), and the **enricher** turns saved transcripts into durable wiki pages. Their toolsets already separate them (transcript has no file tools; enricher has no shell), and the **guard** adds a deterministic, default-deny allowlist on top — so even a fully hijacked subagent can only do its one narrow job. Only the transcript *summaries* (not the raw text) flow back to the curator.
-- **Taste feedback loop** (dotted edges) — you steer the curator just by *talking to it*. Chatting with the agent in Telegram updates Hermes' built-in `USER.md` profile memory; on the next run the enricher folds that chat-stated taste into `interests.md`, which is the curator's primary ranking signal. So "more long-form ML, less drama" said in chat shows up as a re-weighted digest the next morning — no skill edits needed.
+- **Taste feedback** — `interests.md` (the cyan node, shown in both spots — it's the same file) is how you steer the curator. Replying to the agent in Telegram chat feeds your taste profile, which is the curator's *primary ranking signal* on the next run. So "more long-form ML, less drama" said in chat re-weights the next morning's digest — no skill edits needed.
 
 ## Repo layout
 
