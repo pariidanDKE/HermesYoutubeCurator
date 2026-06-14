@@ -12,6 +12,28 @@ Every run (default 08:00 daily):
 2. **Curates** — the agent reads bounded slices of that raw evidence and produces a three-tier Telegram digest (🧠 Pure learning / 🎤 Infotainment / 🍿 Pure entertainment) with durations and a transcript-grounded "Why" per pick.
 3. **Enriches** — durable `entities/` and `concepts/` wiki pages accrete from what you watch, so the curator's taste model improves over time.
 
+## In action
+
+A few moments from a live Telegram setup — the daily digest, steering it by chat, and pulling a pick deeper.
+
+**The morning digest** — the 3-tier ranking with a summary, plus the proactive tail (ideas, a grounded *proposed preference*, and a rich link preview):
+
+| Tiered digest + summary | Ideas / proposed preferences |
+|:--:|:--:|
+| <img src="DigestImages/DIgestExample1.jpg" width="270" alt="Three-tier YouTube Curator digest with summary and a Pure learning pick"> | <img src="DigestImages/ProposedPreferencesIdeas.jpg" width="270" alt="Digest tail: ideas/research, a proposed standing preference, and a rich YouTube link preview"> |
+
+**Steer it by chatting** — two distinct levers: *taste* is remembered (folded into `interests.md`), while *format* changes are written straight into the skill:
+
+| Taste → memory / `interests.md` | Format → skill edit |
+|:--:|:--:|
+| <img src="DigestImages/AddInterestFromFeedback.jpg" width="270" alt="User adds 'investigative infotainment' as a standing preference; agent saves it to memory"> | <img src="DigestImages/FeedbackChangeDigestTemplate.jpg" width="270" alt="User asks to change the digest template; agent edits the youtube-curator skill"> |
+
+**Go deeper on any pick** — ask for a transcript and the agent expands it on demand (via the `youtube-content` skill):
+
+| Transcript deep-dive |
+|:--:|
+| <img src="DigestImages/FetchTranscript.jpg" width="270" alt="Agent fetches a video transcript and returns an expanded summary"> |
+
 ## How it works
 
 ```
