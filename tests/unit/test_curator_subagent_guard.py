@@ -13,9 +13,15 @@ path. Importing only needs the @@WIKI_PATH@@ placeholder, which resolves fine.
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 
 import pytest
+
+# The guard reads HYC_WIKI_PATH at import to resolve its wiki root (else the
+# @@WIKI_PATH@@ deploy placeholder, which isn't absolute). Pin an absolute root so
+# the curator `cat <wiki file>` allowlist has a real base to validate against.
+os.environ.setdefault("HYC_WIKI_PATH", "/tmp/hyc-test-wiki")
 
 _GUARD = (
     Path(__file__).resolve().parents[2]
@@ -95,3 +101,65 @@ def test_legitimate_commands_allowed(cmd):
 )
 def test_injection_variants_blocked(cmd):
     assert _allowed(cmd) is False
+
+
+# --- curator MAIN agent allowlist (recent read + cat of a wiki file) ----------
+#
+# The curator ingests scraped titles/description excerpts while holding terminal +
+# delegate_task, so its terminal is restricted to the two shapes it actually uses.
+# _WIKI_ROOT is the @@WIKI_PATH@@ placeholder at import time; build paths under it.
+
+_curator_allowed = guard._is_allowed_curator_command
+_WIKI = guard._WIKI_ROOT
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        f"{_PY} -m {_MOD} recent --kind recommendations --limit 30",
+        f"{_PY} -m {_MOD} recent --kind history --limit 30",
+        f"python3 -m {_MOD} recent --kind history --limit 30 --offset 60",
+        f"cd /home/x/repo && {_PY} -m {_MOD} recent --kind recommendations --limit 30",
+        f"{_PY} -m {_MOD} recent --kind recommendations --limit 30 2>&1",
+        f"{_PY} -m {_MOD} recent --kind=history --limit=30",
+        f"cat {_WIKI}/interests.md",
+    ],
+)
+def test_curator_legitimate_commands_allowed(cmd):
+    assert _curator_allowed(cmd) is True
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        # the subagent's command is NOT a curator command (different subcommand)
+        f"{_PY} -m {_MOD} fetch-transcript --url {_ID} --save",
+        # arbitrary subcommands / modules
+        f"{_PY} -m {_MOD} refresh-home",
+        f"{_PY} -m os recent --kind history",
+        # missing required --kind, or a bad --kind value
+        f"{_PY} -m {_MOD} recent --limit 30",
+        f"{_PY} -m {_MOD} recent --kind everything --limit 30",
+        # non-int numeric flags / unknown flags / bare positionals
+        f"{_PY} -m {_MOD} recent --kind history --limit ten",
+        f"{_PY} -m {_MOD} recent --kind history --evil x",
+        f"{_PY} -m {_MOD} recent history",
+        # cat escaping the wiki, traversal, relative, or extra args
+        "cat /etc/passwd",
+        f"cat {_WIKI}/../../etc/passwd",
+        "cat interests.md",
+        f"cat {_WIKI}/interests.md {_WIKI}/index.md",
+        # -c / chaining / substitution / redirect / env prefix
+        f'{_PY} -c "__import__(\'os\').system(\'id\')" #{_MOD} recent',
+        f"{_PY} -m {_MOD} recent --kind history; rm -rf /",
+        f"{_PY} -m {_MOD} recent --kind history | sh",
+        f"{_PY} -m {_MOD} recent --kind $(whoami)",
+        f"{_PY} -m {_MOD} recent --kind history > /etc/cron.d/x",
+        f"env {_PY} -m {_MOD} recent --kind history",
+        # empty / junk
+        "",
+        "   ",
+    ],
+)
+def test_curator_injection_variants_blocked(cmd):
+    assert _curator_allowed(cmd) is False

@@ -29,17 +29,33 @@ so even a fully hijacked subagent can only do its narrow job:
                             (``interests.md``, ``index.md``, ``log.md``)
   * anything else        → DENIED (default-deny)
 
+The curator's MAIN agent is policed too. It never sees transcript text, but it
+DOES ingest scraped video titles + description excerpts — a lower-bandwidth but
+real injection channel — while holding ``terminal`` + ``delegate_task``. So the
+same allowlist applies to it:
+
+  * ``terminal``      → only the collector ``recent`` read, or ``cat`` of a wiki file
+  * ``delegate_task`` → allowed (every subagent it spawns is itself policed here,
+                        so a hijacked curator can't escape via an over-privileged
+                        subagent)
+  * anything else     → DENIED (default-deny)
+
 Scope
 -----
-Polices ONLY subagents spawned by the youtube-curator CRON job — NOT interactive
-sessions, CLI, or other cron jobs. A subagent the user spawns from Telegram (to
-fetch a transcript, pip-install, ls, etc.) must run unhindered. Two conditions:
-  1. task_id matches ``^(sa|subagent)-\\d+-`` — a delegated subagent (the main
-     agent's task_id is a bare UUID, conversation_loop.py:343, so never matches);
-  2. its PARENT session is the curator cron job — looked up live in
-     ``_active_subagents`` (the subagent's own session is a fresh id, so we check
-     the parent it inherited, delegate_tool.py:1129).
-See ``_is_curator_cron_subagent``. Fail-open: if scope can't be confirmed, don't police.
+Polices ONLY the youtube-curator CRON job — its main agent AND its subagents —
+NOT interactive sessions, CLI, or other cron jobs. A subagent the user spawns
+from Telegram (to fetch a transcript, pip-install, ls, etc.) must run unhindered.
+
+  * SUBAGENT (``_is_curator_cron_subagent``): two conditions —
+    1. task_id matches ``^(sa|subagent)-\\d+-`` — a delegated subagent (the main
+       agent's task_id is a bare UUID, conversation_loop.py:343, so never matches);
+    2. its PARENT session is the curator cron job — looked up live in
+       ``_active_subagents`` (the subagent's own session is a fresh id, so we check
+       the parent it inherited, delegate_tool.py:1129).
+  * MAIN AGENT (``_is_curator_cron_parent``): its session is ``cron_<jobid>_<ts>``
+    and its task_id is a bare UUID, so we key off the session id directly.
+
+Fail-open everywhere: if scope can't be confirmed, don't police.
 """
 from __future__ import annotations
 
@@ -130,37 +146,82 @@ _TRANSCRIPT_VALUE_FLAGS = {
 }
 _TRANSCRIPT_BOOL_FLAGS = {"--save"}
 
+# `recent` flags — the curator's bounded read of raw evidence. --kind is required
+# (no useful default); --limit/--offset page the newest-first slice.
+_RECENT_VALUE_FLAGS = {
+    "--kind": lambda v: v in ("recommendations", "history"),
+    "--limit": lambda v: bool(_INT.match(v)),
+    "--offset": lambda v: bool(_INT.match(v)),
+}
 
-def _is_allowed_transcript_command(command: str) -> bool:
-    """True only for the curator's exact fetch-transcript invocation.
 
-    Validates an argv structure rather than matching substrings against a
-    free-form string, because the terminal tool runs the command through a shell:
-    any laxity here is arbitrary code execution on the cron host. The single
-    permitted shape (optionally prefixed by one `cd <dir> &&` and/or suffixed by a
-    benign `2>&1`) is:
+def _safe_tokens(command: str) -> Optional[list]:
+    """Shlex-split a command into argv tokens, or None if it's anything but a
+    single command.
 
-        <python> -m hermes_youtube_curator.cli.collector fetch-transcript \
-            --url <11-char-id> [--save] [--max-chars <int>] [--language <codes>]
+    The terminal tool runs the command through a shell, so any laxity here is
+    arbitrary code execution on the cron host. We strip the one permitted
+    `cd <dir> &&` prefix and a benign trailing `2>&1`, reject `#` comments (which
+    can smuggle tokens / hide a payload), then shlex-split. shlex does NOT split on
+    shell operators (`; | & > <`, `$(`, `${`, backticks); they stay embedded in
+    tokens, so we reject any token still carrying one — nothing can chain,
+    redirect, or substitute a second command.
     """
     cmd = (command or "").strip()
     cmd = _CD_PREFIX.sub("", cmd, count=1)  # strip the one permitted `cd <dir> &&`
     cmd = _TRAILING_STDERR_REDIR.sub("", cmd).strip()  # allow a benign trailing `2>&1`
     if not cmd or "#" in cmd:
-        return False  # a `#` comment can smuggle tokens / hide a payload — never needed
-
+        return None
     try:
         tokens = shlex.split(cmd, comments=False, posix=True)
     except ValueError:
-        return False  # unbalanced quotes etc.
+        return None  # unbalanced quotes etc.
+    if not tokens or any(_CHAINING.search(tok) for tok in tokens):
+        return None
+    return tokens
+
+
+def _validate_flags(flags, value_flags, bool_flags, required=()) -> bool:
+    """True if every token in `flags` is an allowlisted flag (value flags pass
+    their validator) and every flag in `required` is present. Rejects unknown
+    flags, bare positionals, and `--save=x` on a bool flag."""
+    seen = set()
+    i = 0
+    while i < len(flags):
+        tok = flags[i]
+        key, sep, inline = tok.partition("=")
+        if key in bool_flags:
+            if sep:  # `--save=x` is not valid for a store_true flag
+                return False
+            seen.add(key)
+            i += 1
+        elif key in value_flags:
+            validate = value_flags[key]
+            if sep:  # `--url=ID` form
+                if not validate(inline):
+                    return False
+                seen.add(key)
+                i += 1
+            else:  # `--url ID` form
+                if i + 1 >= len(flags) or not validate(flags[i + 1]):
+                    return False
+                seen.add(key)
+                i += 2
+        else:
+            return False  # unknown flag or bare positional
+    return all(req in seen for req in required)
+
+
+def _is_allowed_transcript_command(command: str) -> bool:
+    """True only for the curator's exact fetch-transcript invocation (optionally
+    prefixed by one `cd <dir> &&` and/or suffixed by a benign `2>&1`):
+
+        <python> -m hermes_youtube_curator.cli.collector fetch-transcript \
+            --url <11-char-id> [--save] [--max-chars <int>] [--language <codes>]
+    """
+    tokens = _safe_tokens(command)
     if not tokens:
         return False
-    # shlex does NOT split on shell operators (`; | & > <`, `$(`, `${`, backticks);
-    # they stay embedded in tokens. Reject any token still carrying one, so nothing
-    # can chain, redirect, or substitute a second command.
-    if any(_CHAINING.search(tok) for tok in tokens):
-        return False
-
     # argv[0] must be a python interpreter — not `env`, not a `VAR=val` prefix.
     if not _PYTHON_INTERP.match(tokens[0]):
         return False
@@ -168,30 +229,43 @@ def _is_allowed_transcript_command(command: str) -> bool:
     rest = tokens[1:]
     if rest[:3] != ["-m", _COLLECTOR_MODULE, "fetch-transcript"]:
         return False
+    return _validate_flags(
+        rest[3:], _TRANSCRIPT_VALUE_FLAGS, _TRANSCRIPT_BOOL_FLAGS, required=("--url",)
+    )
 
-    # Validate the remaining flags against the strict allowlist.
-    flags = rest[3:]
-    i = 0
-    while i < len(flags):
-        tok = flags[i]
-        key, sep, inline = tok.partition("=")
-        if key in _TRANSCRIPT_BOOL_FLAGS:
-            if sep:  # `--save=x` is not valid for a store_true flag
-                return False
-            i += 1
-        elif key in _TRANSCRIPT_VALUE_FLAGS:
-            validate = _TRANSCRIPT_VALUE_FLAGS[key]
-            if sep:  # `--url=ID` form
-                if not validate(inline):
-                    return False
-                i += 1
-            else:  # `--url ID` form
-                if i + 1 >= len(flags) or not validate(flags[i + 1]):
-                    return False
-                i += 2
-        else:
-            return False  # unknown flag or bare positional
-    return "--url" in {f.partition("=")[0] for f in flags}  # --url is required
+
+def _is_readable_wiki_path(path: str) -> bool:
+    """True for an ABSOLUTE path resolving under the wiki root. The curator has no
+    file tool, so it `cat`s interests.md; confining reads to the wiki stops a hijack
+    from `cat`-ing ~/.ssh/id_rsa etc. into the (Telegram-delivered) digest."""
+    if not path or not isinstance(path, str) or not os.path.isabs(path):
+        return False
+    rp = os.path.realpath(path)
+    root = os.path.realpath(_WIKI_ROOT)
+    return rp == root or rp.startswith(root + os.sep)
+
+
+def _is_allowed_curator_command(command: str) -> bool:
+    """True only for the curator MAIN agent's two terminal shapes (optionally
+    prefixed by one `cd <dir> &&` and/or suffixed by a benign `2>&1`):
+
+        <python> -m hermes_youtube_curator.cli.collector recent \
+            --kind <recommendations|history> [--limit <int>] [--offset <int>]
+        cat <absolute path under the wiki>
+    """
+    tokens = _safe_tokens(command)
+    if not tokens:
+        return False
+    # `cat <abs wiki path>` — how the curator reads interests.md (its ranking signal).
+    if tokens[0] == "cat":
+        return len(tokens) == 2 and _is_readable_wiki_path(tokens[1])
+    # python -m <collector> recent ... (rejects -c, other modules, other subcommands)
+    if not _PYTHON_INTERP.match(tokens[0]):
+        return False
+    rest = tokens[1:]
+    if rest[:3] != ["-m", _COLLECTOR_MODULE, "recent"]:
+        return False
+    return _validate_flags(rest[3:], _RECENT_VALUE_FLAGS, frozenset(), required=("--kind",))
 
 
 def _is_allowed_write_path(path: str) -> bool:
@@ -236,6 +310,27 @@ def _is_curator_cron_subagent(task_id: str) -> bool:
         return False
 
 
+def _is_curator_cron_parent(session_id: str) -> bool:
+    """True only for the youtube-curator CRON job's MAIN agent session.
+
+    The main agent runs in a `cron_<jobid>_<ts>` session (its task_id is a bare
+    UUID that never matches _SUBAGENT_TASK), so we key off the session id directly.
+    A delegated subagent's own session is a fresh, non-`cron_` id, so it never
+    matches here — it's caught by _is_curator_cron_subagent instead. Fail-OPEN like
+    that function: never police interactive or other-cron sessions.
+    """
+    m = _CRON_SESSION_JOBID.match(str(session_id or ""))
+    if not m:
+        return False
+    try:
+        return _job_uses_curator_skill(m.group(1))
+    except Exception as exc:  # jobs.json moved/changed shape, etc.
+        logger.warning(
+            "curator-subagent-guard: parent scope check failed, not policing: %s", exc
+        )
+        return False
+
+
 def _block(reason: str) -> Dict[str, str]:
     # Hermes blocks a tool only when a pre_tool_call hook returns a dict of this
     # exact shape (a plain string is silently ignored — see
@@ -251,12 +346,48 @@ def _pre_tool_call(
     tool_call_id: str = "",
     **_: Any,
 ) -> Optional[str]:
-    # Police ONLY the youtube-curator cron job's subagents. Interactive sessions,
-    # CLI, and other cron jobs are never touched — see _is_curator_cron_subagent.
-    if not _is_curator_cron_subagent(str(task_id)):
-        return None
+    # Police ONLY the youtube-curator cron job — its subagents AND its main agent.
+    # Interactive sessions, CLI, and other cron jobs are never touched.
     args = args if isinstance(args, dict) else {}
+    if _is_curator_cron_subagent(str(task_id)):
+        return _police_subagent(str(tool_name), args)
+    if _is_curator_cron_parent(str(session_id)):
+        return _police_curator(str(tool_name), args)
+    return None
 
+
+def _police_curator(tool_name: str, args: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    """Allowlist for the curator MAIN agent. It ingests scraped titles/description
+    excerpts (a low-bandwidth but real injection channel) while holding terminal +
+    delegate_task — so restrict terminal to the two reads it needs. delegate_task is
+    allowed because every subagent it spawns is itself policed by _police_subagent,
+    so a hijacked curator can't escape by spawning an over-privileged subagent."""
+    if tool_name == "terminal":
+        if _is_allowed_curator_command(args.get("command", "") or ""):
+            return None
+        logger.warning(
+            "curator-subagent-guard: blocked curator terminal command: %r",
+            str(args.get("command", ""))[:300],
+        )
+        return _block(
+            "the curator's terminal may only run the collector `recent` read "
+            "(`python -m hermes_youtube_curator.cli.collector recent --kind "
+            "recommendations|history [--limit <n>] [--offset <n>]`) or `cat` of a "
+            "file under the wiki; no other commands, pipes, redirects, or chaining."
+        )
+    if tool_name == "delegate_task":
+        return None  # the spawned subagent is itself policed by _police_subagent
+    logger.warning(
+        "curator-subagent-guard: blocked curator tool %r (default-deny)", tool_name
+    )
+    return _block(
+        f"tool {tool_name!r} is not on the curator allowlist (allowed: terminal "
+        "restricted to the `recent` read and `cat` of wiki files, plus delegate_task)."
+    )
+
+
+def _police_subagent(tool_name: str, args: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    """Allowlist for a delegated subagent (transcript or wiki-enricher)."""
     # Transcript subagent: terminal restricted to the fetch-transcript command.
     if tool_name == "terminal":
         if _is_allowed_transcript_command(args.get("command", "") or ""):
