@@ -47,7 +47,7 @@ cron (08:00)
         └─ writes the 3-tier digest  ──► Telegram
 ```
 
-Two heavy/untrusted jobs are isolated into delegated subagents so they never enter the curator's context. A `pre_tool_call` guard plugin (`curator-subagent-guard`) hard-restricts those subagents: the transcript one may *only* run the `fetch-transcript` command; the enricher may *only* write under the wiki's `entities/`/`concepts/` dirs — defense-in-depth against prompt injection from untrusted transcript text. See [deploy/plugins/curator-subagent-guard/](deploy/plugins/curator-subagent-guard/).
+**Every agent that touches scraped data runs under a default-deny `pre_tool_call` guard** (`curator-subagent-guard`), sized to its exposure × blast radius. The two heavy/untrusted jobs are first *isolated* into delegated subagents so their large or hostile content never enters the curator's context — then the guard hard-restricts them: the transcript subagent may *only* run the `fetch-transcript` command; the enricher may *only* write under the wiki's `entities/`/`concepts/` dirs. The curator itself also ingests scraped titles and description excerpts — a lower-bandwidth but real injection channel — while holding the most powerful tools, so the same guard restricts *its* terminal to the bounded `recent` read and `cat` of a wiki file (and lets it `delegate_task`, since every subagent it spawns is policed by this same guard). Defense-in-depth against prompt injection, applied to each agent in proportion to its risk. See [deploy/plugins/curator-subagent-guard/](deploy/plugins/curator-subagent-guard/).
 
 ## Pipeline (detailed flow)
 
@@ -66,7 +66,7 @@ flowchart TD
     end
 
     sh -- "stdout: absolute paths<br/>injected into prompt" --> curator
-    raw -. "bounded 'recent' slices" .-> curator
+    raw -. "bounded 'recent' slices<br/>titles/desc — low-bandwidth<br/>injection channel" .-> curator
     interests[("interests.md<br/>taste profile")] -. "primary ranking signal" .-> curator
 
     subgraph orch["② &nbsp;CURATE &nbsp;·&nbsp; orchestrator agent (youtube-curator skill)"]
@@ -75,12 +75,13 @@ flowchart TD
 
     curator -- "delegate · isolate context" --> tsub
     curator -- "delegate · isolate context" --> wsub
+    curator -- "its own terminal:<br/>only 'recent' + 'cat'" --> guard
 
-    subgraph iso["③ &nbsp;DELEGATED SUBAGENTS &nbsp;·&nbsp; isolated context — untrusted content never reaches the curator"]
+    subgraph iso["③ &nbsp;GUARDED EXECUTION &nbsp;·&nbsp; default-deny allowlist over the whole curator job"]
         direction TB
-        tsub["📄 &nbsp;TRANSCRIPT subagent<br/><i>toolset: terminal</i>"]
-        wsub["📚 &nbsp;WIKI-ENRICHER subagent<br/><i>toolset: file</i>"]
-        guard{{"🛡️ &nbsp;<b>curator-subagent-guard</b><br/>pre_tool_call · default-deny<br/><i>scoped to cron curator subagents</i>"}}
+        tsub["📄 &nbsp;TRANSCRIPT subagent<br/><i>toolset: terminal · isolated</i>"]
+        wsub["📚 &nbsp;WIKI-ENRICHER subagent<br/><i>toolset: file · isolated</i>"]
+        guard{{"🛡️ &nbsp;<b>curator-subagent-guard</b><br/>pre_tool_call · default-deny<br/><i>scoped to the whole cron curator job</i>"}}
         tsub --> guard
         wsub --> guard
         guard -- "only the transcript-fetch command" --> twork["fetch + save + summarize<br/><b>UNTRUSTED</b> transcript text"]
@@ -89,6 +90,8 @@ flowchart TD
         guard -- "anything else" --> deny["⛔ &nbsp;DENIED"]
         wwork --> wikiout[("entities/ + concepts/<br/>interests.md")]
     end
+
+    guard -- "curator: only 'recent' + 'cat' allowed" --> curator
 
     twork -- "2–3 sentence summaries<br/>(sharpen each pick's 'Why')" --> curator
     curator ==> digest["📱 &nbsp;<b>3-tier Telegram digest</b><br/>🧠 learning · 🎤 infotainment · 🍿 entertainment"]
@@ -123,8 +126,8 @@ flowchart TD
 **Reading the diagram:**
 
 - **1 · Collect** is pure scraping — no model. The cron job's script (`youtube-curator-collect.sh`) ensures a logged-in Chrome is up on the CDP port, runs the two deterministic collectors, and writes the append-only `raw/` evidence. Its stdout (a list of absolute wiki paths) is piped into the curator's prompt as ground truth for the run.
-- **2 · Curate** is the only place the orchestrator's own context lives. It reads *bounded* `recent` slices of the raw events plus `interests.md` (the taste profile), ranks against them, and builds the tiered shortlist — it never reads the large raw files or transcripts directly.
-- **3 · Delegated subagents** run the heavy/untrusted work in throwaway context: the **transcript** subagent ingests untrusted video transcript text (a prime prompt-injection vector), and the **enricher** turns saved transcripts into durable wiki pages. Their toolsets already separate them (transcript has no file tools; enricher has no shell), and the **guard** adds a deterministic, default-deny allowlist on top — so even a fully hijacked subagent can only do its one narrow job. Only the transcript *summaries* (not the raw text) flow back to the curator.
+- **2 · Curate** is the only place the orchestrator's own context lives. It reads *bounded* `recent` slices of the raw events plus `interests.md` (the taste profile), ranks against them, and builds the tiered shortlist — it never reads the large raw files or transcripts directly. The titles and description excerpts it *does* see are still scraped content, so they're a (low-bandwidth) injection channel — hence the curator's own terminal is allowlisted by the guard to just the `recent` read and `cat` of a wiki file. Even a hijacked curator can't run arbitrary shell; the worst a poisoned title could do is skew that day's ranking.
+- **3 · Guarded execution** is the single security boundary over the *whole* job — both the curator's own terminal and the two delegated subagents pass through the same default-deny guard, each restricted in proportion to its risk. The heavy/untrusted work runs in throwaway context: the **transcript** subagent ingests untrusted video transcript text (the prime prompt-injection vector — a full transcript is a far richer canvas than a title), and the **enricher** turns saved transcripts into durable wiki pages. Their toolsets already separate them (transcript has no file tools; enricher has no shell), and the guard adds a deterministic allowlist on top — so even a fully hijacked agent can only do its one narrow job. `delegate_task` stays open to the curator precisely because any subagent it spawns is policed here too. Only the transcript *summaries* (not the raw text) flow back to the curator.
 - **Taste feedback** — `interests.md` (the cyan node, shown in both spots — it's the same file) is how you steer the curator. Replying to the agent in Telegram chat feeds your taste profile, which is the curator's *primary ranking signal* on the next run. So "more long-form ML, less drama" said in chat re-weights the next morning's digest — no skill edits needed.
 
 ## Repo layout
